@@ -1,0 +1,3 @@
+[submodule "cmakego"]
+	path = cmakego
+	url = https://github.com/eruffaldi/cmakego
