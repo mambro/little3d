@@ -10,11 +10,11 @@
 using namespace glpp;
 
 const char * meshv = GLSL330(
-	layout(location = 0) in vec3 vertexPosition_modelspace;
+	layout(location = 0) in vec4 vertexPosition_modelspace;
 	layout(location = 1) in vec3 vertexNormal_modelspace;
 	uniform mat4 m_VM;
 	uniform mat4 m_P;
-	uniform vec3 m_N;
+	uniform mat3 m_N;
 	uniform vec3 l_pos;
 	out vec3 DataIn_normal;
 	out vec3 DataIn_lightDir;
@@ -22,9 +22,9 @@ const char * meshv = GLSL330(
 
 	void main(){
 		vec4 pos = m_VM * vertexPosition_modelspace;
-    	DataOut_normal = normalize(m_N * vertexNormal_modelspace);
-    	DataOut_lightDir = vec3(l_pos - pos);
-    	DataOut_eye = vec3(-pos);
+    	DataIn_normal = normalize(m_N * vertexNormal_modelspace);
+    	DataIn_lightDir = vec3(l_pos - pos.xyz);
+    	DataIn_eye = vec3(-pos);
 
 	    gl_Position =  m_P*pos;
 	}
@@ -61,6 +61,53 @@ const char * meshf = GLSL330(
 	}
 );
 
+
+struct matrixsetup
+{
+	Eigen::Matrix4f MVP;
+	Eigen::Matrix4f VM;
+	Eigen::Matrix4f P;
+	Eigen::Matrix3f N;
+};
+
+struct material
+{
+	void initshader()
+	{
+		uVM.init(sha,"m_VM");
+		uP.init(sha,"m_P");
+		uN.init(sha,"m_N");
+		l_pos.init(sha,"l_pos");
+		diffuse.init(sha,"diffuse");
+		ambient.init(sha,"ambient");
+		specular.init(sha,"specular");
+		shininess.init(sha,"shininess");
+
+		l_pos << Eigen::Vector3f(0.0,2.0,3.0);
+		diffuse << Eigen::Vector4f(0.0,1.0,0.0,0.5);
+		ambient << Eigen::Vector4f(0.2,0.2,0.2,0.4);
+		specular << Eigen::Vector4f(0.2,0.2,0.2,0.4);
+		shininess << 10;
+	} 
+
+	void update(matrixsetup & x)
+	{
+		uVM << x.VM;
+		uP << x.P;
+		uN << x.N;
+	}
+
+	Shader sha;
+
+	WrappedUniform<Eigen::Matrix4f> uVM;
+	WrappedUniform<Eigen::Matrix4f> uP;
+	WrappedUniform<Eigen::Matrix3f> uN;
+	WrappedUniform<Eigen::Vector3f> l_pos;
+	WrappedUniform<Eigen::Vector4f> diffuse,ambient,specular;
+	WrappedUniform<float> shininess;
+};
+
+
 struct basicobj
 {
 	basicobj()
@@ -71,22 +118,23 @@ struct basicobj
 		vao.init();		
 	}
 
-	void render(Eigen::Matrix4f & mvp)
+
+	void render(matrixsetup & mvp)
 	{
 		GLScope<VAO> v(vao);
 		GLScope<VBO<1> > t(tvbo,GL_ELEMENT_ARRAY_BUFFER);
-		GLScope<Shader> s(sha);
-    	glUniformMatrix4fv(uMVP,1,GL_FALSE,mvp.data());
+		GLScope<Shader> s(mat->sha);
+		mat->update(mvp);
     	glDrawElements(GL_TRIANGLES,ntri,GL_UNSIGNED_INT,0); 
 	}
 
-	int uMVP = 0;
+	
 	int ntri = 0;
 	VBO<1> vvbo;
 	VBO<1> nvbo;
 	VBO<1> tvbo;
 	VAO    vao;
-	Shader sha;
+	std::shared_ptr<material> mat;
 };
 
 int main(int argc, char **argv)
@@ -115,6 +163,7 @@ int main(int argc, char **argv)
 	if( !scene)
 		return -1;
 
+	std::shared_ptr<material> mat = std::make_shared<material>();
 	std::cout << "only one got:" << scene->mNumMeshes << " meshes" << std::endl;
 	for(int i = 0; i < scene->mNumMeshes; i++)
 	{
@@ -128,6 +177,7 @@ int main(int argc, char **argv)
 		glERR("opengl:before new");
 		std::unique_ptr<basicobj> op(new basicobj());
 		basicobj & o = *op;
+		o.mat = mat;
 		{
 	std::cout << "vbo... " << std::endl;
 		{
@@ -198,17 +248,19 @@ int main(int argc, char **argv)
 	        o.ntri = m->mNumFaces;
 			glERR("opengl:indexsetup");
 		}
-		{
-		    if(!o.sha.load(meshv, meshf, 0, 0, 0, false))
-		    	exit(-1);
-		    o.uMVP = o.sha.uniformLocation("uMVP");
-			std::cout << "sha... " << " " << o.uMVP << std::endl;
-			glERR("opengl:setup");
-		}
 		objects.push_back(std::move(op));
  
 	}
+	{
+	    if(!mat->sha.load(meshv, meshf, 0, 0, 0, false))
+	    	exit(-1);
+	    GLScope<Shader> ss(mat->sha);
+	    mat->initshader();
+		glERR("opengl:setup");
+	}
 	std::cout << "go...\n";
+	glEnable(GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
@@ -223,12 +275,16 @@ int main(int argc, char **argv)
 	std::cout << "View is\n" <<  View  << std::endl;
 	std::cout << "Model is\n" <<  Model << std::endl;
 	std::cout << "Matrix is\n" << Proj * View * Model << std::endl;
+	matrixsetup ms;
+	ms.VM = View*Model;
+	ms.P = Proj;
+	ms.N = ms.VM.block<3,3>(0,0).transpose();
+
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-		Eigen::Matrix4f  MVP        = Proj * View * Model; 
 		for(auto & o : objects)
-			o->render(MVP);
+			o->render(ms);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	} 

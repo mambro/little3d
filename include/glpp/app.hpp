@@ -29,7 +29,6 @@ namespace glpp
 
 		glfwMakeContextCurrent(window);
 
-
 		glewExperimental = true; // Needed for core profile
 		if (glewInit() != GLEW_OK) 
 		{

@@ -1,8 +1,5 @@
 #pragma once
 
-#define GLSL150(src) "#version 150 core\n" #src
-#define GLSL330(src) "#version 330\n" #src
-#define GLSL(src) #src
 
 //#include "SOIL.h"
 #include <stdio.h>
@@ -20,7 +17,6 @@
 #endif
 #include "glpp/ioutils.hpp"
 
-
 inline bool glERR(const char * name)
 {
 	//BOOST_LOG_NAMED_SCOPE("GL");
@@ -33,6 +29,8 @@ inline bool glERR(const char * name)
     }
     return r;
 }
+
+#include "shader.hpp"
 
 namespace glpp
 {
@@ -141,211 +139,12 @@ inline GLSize nextpow2(GLSize sz)
 }
 
 
-class Texture
-{
-public:
-	void bind(int unit = 0,GLenum what = GL_TEXTURE_2D)
-	{
-		glActiveTexture(GL_TEXTURE0 + unit);
-		glBindTexture(what,resource_);
-	}
+}
 
-	void unbind(int unit = 0,GLenum what = GL_TEXTURE_2D)
-	{
-		glActiveTexture(GL_TEXTURE0 + unit);
-		glBindTexture(what,0);
-	}
-
-	bool load(const char * name, bool expanded = false);
-
-	bool valid() const { return resource_ != 0; }
-
-	operator GLuint () const { return resource_; }
-
-	~Texture()
-	{
-		release();
-	}
+#include "texture.hpp"
 
 
-	void release()
-	{
-		if(resource_)
-		{
-			glDeleteTextures(1,&resource_);
-			resource_ = 0;
-		}
-	}
-
-	void initdepth(GLSize size)
-	{
-		release();	
-		size_ = size;
-		glGenTextures(1, &resource_);
-		glBindTexture(GL_TEXTURE_2D, resource_);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size_.width, size_.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glBindTexture(GL_TEXTURE_2D,0);
-		format_ = GL_DEPTH_COMPONENT;
-		type_ = GL_FLOAT;
-		itemsize_ = 4; // float
-	}
-
-	// basic full volume GL_R8 GL_UNSIGNED_BYTE
-	bool init3d(const uint8_t * data, int xd,int yd,int zd)
-	{
-		std::array<int,3> bigsize = {xd,yd,zd};
-		return init3d(data,xd*yd*zd,bigsize,bigsize,false,false,true,true);
-	}
-
-	/// nbytes is the amount of data (only for check)
-	/// size is the size of the 3D texture
-	/// extent is the extent of the region to be copied at origin
-	/// rgba means GL_RGBA vs GL_R
-	/// float means GL_FLOAT vs GL_UNSIGNED_BYTE
-	bool init3d(const uint8_t * data, int nbytes, const std::array<int,3> &size, const std::array<int,3>  &extent, bool rgba,bool isfloat, bool clampme, bool interp);
-
-	
-	void init(GLSize size, GLenum targetformat, GLenum datatype, bool aspow2 = false)
-	{
-		release();	
-		size_ = size;
-		if(aspow2)
-		{
-			size = nextpow2(size);
-		}
-		realsize_ = size;
-
-		glGenTextures(1, &resource_);
-
-		glBindTexture(GL_TEXTURE_2D, resource_);
-		glTexImage2D(GL_TEXTURE_2D, 0, targetformat, size.width,size.height, 0, targetformat, datatype, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glBindTexture(GL_TEXTURE_2D,0);
-		itemsize_ = targetformat == GL_RGBA||targetformat == GL_DEPTH_COMPONENT ? 4 : 3;
-		format_ = targetformat;
-		type_ = GL_UNSIGNED_BYTE;
-	}
-
-
-	void init(GLSize size, bool rgba = true, bool aspow2 = false)
-	{
-		init(size,(GLenum)(rgba ? GL_RGBA : GL_RGB),GL_UNSIGNED_BYTE,aspow2);
-	}
-
-	void resize(GLSize size, GLenum targetformat, bool aspow2 = false)
-	{
-		size_ = size;
-		if(aspow2)
-		{
-			size = nextpow2(size);
-		}
-		realsize_ = size;
-
-		glBindTexture(GL_TEXTURE_2D, resource_);
-		glTexImage2D(GL_TEXTURE_2D, 0, targetformat, size.width,size.height, 0, targetformat, GL_UNSIGNED_BYTE, NULL);
-		glBindTexture(GL_TEXTURE_2D,0);
-		itemsize_ = targetformat == GL_RGBA ? 4 : 3;
-		format_ = targetformat;
-		type_ = GL_UNSIGNED_BYTE;
-	}
-
-	int width() const {return size_.width; }
-	int height() const {return size_.height; }
-
-	GLSize size() const {return size_;}
-
-	GLSize realsize() const {return realsize_;}
-	
-	bool flipped() const { return flipped_; }
-
-	void setFlipped(bool f) { flipped_ = f; }
-
-	/// raw means that 
-	bool getdataraw(std::vector<uint8_t> & data)
-	{
-		data.resize(width()*height()*itemsize_);
-		glBindTexture(GL_TEXTURE_2D,resource_);
-		glGetTexImage(GL_TEXTURE_2D,0,format_,type_,&data[0]);
-		glBindTexture(GL_TEXTURE_2D,0);
-		return true;
-	}
-
-	Texture() {}
-private:
-	GLenum format_ = 0,type_ = 0;
-	int itemsize_ = 4;
-	bool flipped_ = false;
-	GLSize size_;
-	GLSize realsize_;
-	GLuint resource_ = 0;
-
-	Texture(const Texture & );
-};
-
-/**
- * Simple Shader clase
- */
-class Shader
-{
-public:
-	class ShaderException : public std::exception 
-	{
-
-	};
-
-	Shader() {}
-	operator GLuint ()
-	{
-		return resource_;
-	}
-
-	~Shader()
-	{
-		release();
-	}
-
-	void release()
-	{
-		if(resource_)
-		{
-			glDeleteProgram(resource_);
-			resource_ = 0;
-		}
-	}
-
-	void bind()
-	{
-		glUseProgram(resource_);
-	}
-
-	void unbind()
-	{
-		glUseProgram(0);
-	}
-
-	GLint uniformLocation(const char * name, bool hard = true)
-	{
-		GLint r = glGetUniformLocation(resource_,name);
-		if(r < 0 && hard)
-			throw ShaderException();
-		else
-			return r;
-	}
-
-	bool load(const char * vertex_file_path,const char * fragment_file_path,const char * geo_file_path=0, const GLchar**captures=0, int ncaptures=0, bool fromfile=true) ;
-
-private:
-	Shader(const Shader & );
-	GLuint resource_ = 0;
-};
-
+namespace glpp {
 /**
  * Query Class
  */
@@ -502,7 +301,7 @@ public:
 	enum ReadFormat { ColorRGB, Depth};
 
 	/// raw means that 
-	bool getdataraw(std::vector<uint8_t> & data, ReadFormat f)
+	bool getDataRaw(std::vector<uint8_t> & data, ReadFormat f)
 	{
 		GLenum format = GL_RGB,type = GL_UNSIGNED_BYTE;
 		int size = 1;
@@ -519,7 +318,7 @@ public:
 	}
 
 	/// raw means that 
-	bool getdataraw(std::vector<float> & data, ReadFormat f)
+	bool getDataRaw(std::vector<float> & data, ReadFormat f)
 	{
 		GLenum format = GL_RGB,type = GL_UNSIGNED_BYTE;
 		int size = 1;
@@ -838,236 +637,6 @@ private:
 
 };
 
-
-/**
- * This code requires cleanup
- */
-inline bool Shader::load(const char * vertex_file_path,const char * fragment_file_path,const char * geo_file_path, const GLchar**captures, int ncaptures, bool fromfile) {
-
-	GLuint programID = 0;
-
-	// Create the shaders
-	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-	GLuint FragmentShaderID = 0;
-	GLuint GeoShaderID = 0;
-	if(fragment_file_path != 0 && fragment_file_path[0] != 0)
-		FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-	if(geo_file_path != 0 && geo_file_path[0] != 0)
-		GeoShaderID = glCreateShader(GL_GEOMETRY_SHADER);
-
-
-	// Read the Vertex Shader code from the file
-	std::string VertexShaderCode;
-	if(fromfile)
-	{
-		std::ifstream VertexShaderStream(vertex_file_path, std::ios::in);
-		if(VertexShaderStream.is_open()){
-			std::string Line = "";
-			while(getline(VertexShaderStream, Line))
-				VertexShaderCode += "\n" + Line;
-			VertexShaderStream.close();
-		}else{
-			return false;
-		}
-	}
-	else
-		VertexShaderCode = vertex_file_path;
-
-	// Read the Fragment Shader code from the file
-	std::string FragmentShaderCode;
-	if(FragmentShaderID)
-	{
-		if(fromfile)
-		{
-			std::ifstream FragmentShaderStream(fragment_file_path, std::ios::in);
-			if(FragmentShaderStream.is_open()){
-				std::string Line = "";
-				while(getline(FragmentShaderStream, Line))
-					FragmentShaderCode += "\n" + Line;
-				FragmentShaderStream.close();
-			}
-		}
-		else
-		{
-			FragmentShaderCode = fragment_file_path;	
-		}
-	}
-
-	// Read the Fragment Shader code from the file
-	std::string GeoShaderCode;
-	if(GeoShaderID)
-	{
-		if(fromfile)
-		{
-			std::ifstream GeoShaderStream(geo_file_path, std::ios::in);
-			if(GeoShaderStream.is_open()){
-				std::string Line = "";
-				while(getline(GeoShaderStream, Line))
-					GeoShaderCode += "\n" + Line;
-				GeoShaderStream.close();
-			}
-		}
-		else
-		{
-			GeoShaderCode = geo_file_path;	
-		}
-	}
-
-	GLint Result = GL_FALSE;
-	int InfoLogLength;
-
-	// Compile Vertex Shader
-	//printf("Compiling shader : %s\n", fromfile ? vertex_file_path: "<inline>");
-	char const * VertexSourcePointer = VertexShaderCode.c_str();
-	glShaderSource(VertexShaderID, 1, &VertexSourcePointer , NULL);
-	glCompileShader(VertexShaderID);
-
-	// Check Vertex Shader
-	glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
-	glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if ( Result == 0){
-		std::vector<char> VertexShaderErrorMessage(InfoLogLength+1);
-		glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
-		printf("failed %s\n", &VertexShaderErrorMessage[0]);
-		return false;
-	}
-
-	if(FragmentShaderID)
-	{
-		// Compile Fragment Shader
-		//printf("Compiling shader : %s\n", fromfile? fragment_file_path : "<inline>");
-		char const * FragmentSourcePointer = FragmentShaderCode.c_str();
-		glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer , NULL);
-		glCompileShader(FragmentShaderID);
-
-		// Check Fragment Shader
-		glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
-		glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-		if ( Result == 0 ){
-			std::vector<char> FragmentShaderErrorMessage(InfoLogLength+1);
-			glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
-			printf("failed %s\n", &FragmentShaderErrorMessage[0]);
-			return false;
-		}
-	}
-
-	if(GeoShaderID)
-	{
-		const char * file_path = geo_file_path;
-		std::string & code = GeoShaderCode;
-		GLuint & sid = GeoShaderID;
-
-		printf("Compiling shader : %s\n",fromfile? file_path:"<inline>");
-
-		char const * SourcePointer = code.c_str();
-		glShaderSource(sid, 1, &SourcePointer , NULL);
-		glCompileShader(sid);
-		glGetShaderiv(sid, GL_COMPILE_STATUS, &Result);
-		glGetShaderiv(sid, GL_INFO_LOG_LENGTH, &InfoLogLength);
-		if ( Result == 0 ){
-			std::vector<char> ErrorMessage(InfoLogLength+1);
-			glGetShaderInfoLog(GeoShaderID, InfoLogLength, NULL, &ErrorMessage[0]);
-			printf("failed %s\n", &ErrorMessage[0]);
-			return false;
-		}
-	}
-
-	programID = glCreateProgram();
-	glAttachShader(programID, VertexShaderID);
-	glAttachShader(programID, FragmentShaderID);
-	if(GeoShaderID)
-		glAttachShader(programID, GeoShaderID);
-	if(ncaptures)
-	{
-		glTransformFeedbackVaryings(programID, ncaptures, captures, GL_INTERLEAVED_ATTRIBS);		
-	}
-	glLinkProgram(programID);
-
-	glGetProgramiv(programID, GL_LINK_STATUS, &Result);
-	glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if ( Result == GL_FALSE)
-	{
-		std::vector<char> ProgramErrorMessage(InfoLogLength+1);
-		glGetProgramInfoLog(programID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-		printf("%s\n", &ProgramErrorMessage[0]);
-		return false;
-	}
-
-	glDeleteShader(VertexShaderID);
-	if(FragmentShaderID)
-		glDeleteShader(FragmentShaderID);
-	if(GeoShaderID)
-		glDeleteShader(GeoShaderID);
-
-	release();
-	resource_ = programID;
-	return true;
-}
-
-inline	bool Texture::load(const char * name, bool expanded)
-	{
-		release();
-		int width;
-		int height;
-#if 0
-		unsigned char * image = SOIL_load_image(name, &width, &height, 0, SOIL_LOAD_RGB);
-
-		if (image == NULL) 
-		{
-			return false;
-		}
-		size_ = GLSize(width,height);
-		
-
-		/*
-		resource_ = SOIL_load_OGL_texture
-		(
-		  name,
-		  SOIL_LOAD_AUTO,
-		  SOIL_CREATE_NEW_ID,
-		  SOIL_FLAG_INVERT_Y|SOIL_LOAD_RGBA
-		  //SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB 
-		  //| SOIL_FLAG_COMPRESS_TO_DXT
-		);		
-		*/
-
-		glGenTextures(1,&resource_);
-		bind();
-
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		int width2 = pow2roundup(width);
-		int height2 = pow2roundup(height);
-
-		if(expanded)
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width2, height2, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, 0,0, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-		}
-		else
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);			
-		}
-		
-		GLint realwidth = 0;
-		GLint realheight = 0;
-		glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_WIDTH,&realwidth);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_HEIGHT,&realheight);
-		//std::cout << "Texture real " << realwidth << " x " << realheight << " for "  << width << " x " << height << std::endl; 
-		SOIL_free_image_data(image);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		float color[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
-		unbind();
-		return true;
-		#else
-		return false;
-		#endif
-	}
-
 /**
  * Scope for Viewport set and restore
  */
@@ -1194,7 +763,7 @@ struct GLScopeDisable
 template<>
 struct GLScope<Texture>
 {
-	GLScope(Texture & x, GLenum mode, int unit = 0):  mode_(mode) { x.bind(unit,mode);}
+	GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0):  mode_(mode) { x.bind(mode,unit);}
 	GLScope(GLuint x, GLenum mode, int unit = 0):  mode_(mode) { glActiveTexture(GL_TEXTURE0+unit); glBindTexture(mode,x); }
 	~GLScope() { glBindTexture(mode_,0); }
 
