@@ -1,0 +1,13 @@
+#pragma once
+
+
+namespace glpp
+{
+	enum class BT { ARRAY = GL_ARRAY_BUFFER, ELEMENT = GL_ELEMENT_ARRAY_BUFFER }; 
+	enum class TT { T2D = GL_TEXTURE_2D, T3D = GL_TEXTURE_3D }; 
+	enum class EN { CULL_FACE= GL_CULL_FACE };
+	enum class BU { STATIC_DRAW = GL_STATIC_DRAW}; 
+	enum class DT { UNSIGNED_INT = GL_UNSIGNED_INT};
+	enum class PT { TRIANGLES = GL_TRIANGLES}; 
+	enum class CM { COLOR = GL_COLOR_BUFFER_BIT, DEPTH = GL_DEPTH_BUFFER_BIT, COLOR_DEPTH = GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT};
+}

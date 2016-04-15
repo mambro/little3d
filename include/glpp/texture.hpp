@@ -1,4 +1,5 @@
 #include "SOIL/SOIL.h"
+#include "stb_image_write.h"
 
 #ifndef COCO_FATAL
 #define COCO_ERR() std::cout
@@ -419,9 +420,19 @@ public:
     {
         std::vector<uint8_t> buffer;
         getDataRaw(buffer);
-        SOIL_save_image(file_name.c_str(), SOIL_SAVE_TYPE_BMP, size_.width, size_.height, 3, &buffer[0]);
+        int c = type_ == GL_RED ? 1 : type_ == GL_RGB ? 3 : 4;
+        if(type_ == GL_UNSIGNED_SHORT)
+        {
+            // 16bit grayscale 
+            stbi_write_png(file_name.c_str(),size_.width, size_.height,c*2,&buffer[0],0);
+        }
+        else
+        {
+            stbi_write_png(file_name.c_str(),size_.width, size_.height,c,&buffer[0],0);
+        }
         return true;
     }
+
     int width() const { return size_.width; }
     int height() const { return size_.height; }
     GLSize realsize() const { return size_; }
