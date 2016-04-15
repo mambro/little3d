@@ -1,9 +1,6 @@
 #include "glpp/app.hpp"
 #include "glpp/draw.hpp"
 #include "glpp/gleigen.hpp"
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
 #include <Eigen/Geometry>
 #include <iostream>
 

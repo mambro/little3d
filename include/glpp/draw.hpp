@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include "glpp/strictgl.hpp"
 #ifdef BOOST_LOG
 #include <boost/log/trivial.hpp>
 #else
@@ -386,7 +387,7 @@ template <int N>
 class VBO
 {
 public:
-	VBO() { inited_ = false; }
+	VBO() { }
 
 	void init()
 	{
@@ -429,7 +430,7 @@ public:
 	}
 private:
 	VBO(const VBO&);
-	bool inited_;
+	bool inited_ = false;
 	GLuint resource_[N];
 };
 
@@ -722,11 +723,8 @@ struct GLScope<FBO>
 template<int n>
 struct GLScope<VBO<n> >
 {
-	GLScope(VBO<n> & x, GLenum mode = GL_ARRAY_BUFFER, int unit = 0): unit_(unit), x_(x),mode_(mode) { x.bind(mode,unit); }
-	~GLScope() { x_.unbind(mode_); }
-
-	VBO<n> & x_;
-	int unit_;
+	GLScope(VBO<n> & x, GLenum mode = GL_ARRAY_BUFFER, int unit = 0) : mode_(mode) { x.bind(mode,unit); }
+	~GLScope() { glBindBuffer(mode_,0); }
 	GLenum mode_;
 };
 
@@ -736,10 +734,8 @@ struct GLScope<VBO<n> >
 template<>
 struct GLScope<VBO<1> >
 {
-	GLScope(VBO<1> & x, GLenum mode = GL_ARRAY_BUFFER): x_(x),mode_(mode) { x.bind(mode); }
-	~GLScope() { x_.unbind(mode_); }
-
-	VBO<1> & x_;
+	GLScope(VBO<1> & x, GLenum mode = GL_ARRAY_BUFFER): mode_(mode) { x.bind(mode); }
+	~GLScope() { glBindBuffer(mode_,0); }
 	GLenum mode_;
 };
 
