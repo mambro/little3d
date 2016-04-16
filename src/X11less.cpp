@@ -1,7 +1,13 @@
 // See http://arrayfire.com/remote-off-screen-rendering-with-opengl/
 // 
+#ifdef USE_EGL_GET_DISPLAY
 #include <EGL/egl.h>
-
+#else
+#define EGL_EGLEXT_PROTOTYPES
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
+#include <stdio.h>
   static const EGLint configAttribs[] = {
           EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
           EGL_BLUE_SIZE, 8,
@@ -25,11 +31,43 @@
 int main(int argc, char *argv[])
 {
   // 1. Initialize EGL
-  EGLDisplay eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+#ifdef USE_EGL_GET_DISPLAY
+    // obtain the display via default display. 
+    EGLDisplay eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+#else
+    // obtain display by specifying an appropriate device. This is the preferred method today.
 
-  EGLint major, minor;
+    // load the function pointers for the device,platform extensions 
+    PFNEGLQUERYDEVICESEXTPROC eglQueryDevicesEXT =
+               (PFNEGLQUERYDEVICESEXTPROC) eglGetProcAddress("eglQueryDevicesEXT");
+    if(!eglQueryDevicesEXT) { 
+         printf("ERROR: extension eglQueryDevicesEXT not available"); 
+         return(-1); 
+    } 
+    
+    PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT =
+               (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+    if(!eglGetPlatformDisplayEXT) { 
+         printf("ERROR: extension eglGetPlatformDisplayEXT not available"); 
+         return(-1);  
+    }
+  
+    static const int MAX_DEVICES = 16;
+    EGLDeviceEXT devices[MAX_DEVICES];
+    EGLint numDevices;
+
+    eglQueryDevicesEXT(MAX_DEVICES, devices, &numDevices);
+printf("Devices %d with device %p\n",numDevices,devices[0]);
+//eglQueryDeviceAttribEXT(devices[0],
+    EGLDisplay eglDpy = eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT, devices[0], 0);
+#endif    
+
+printf("Display %p\n",eglDpy);
+  EGLint major=0, minor=0;
 
   eglInitialize(eglDpy, &major, &minor);
+
+printf("Found %d %d\n",major,minor);
 
   // 2. Select an appropriate configuration
   EGLint numConfigs;
@@ -46,7 +84,7 @@ int main(int argc, char *argv[])
 
   // 5. Create a context and make it current
   EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT,                       NULL);
-
+printf("Context %p\n",eglCtx);
   eglMakeCurrent(eglDpy, eglSurf, eglSurf, eglCtx);
 
   // from now on use your OpenGL context
