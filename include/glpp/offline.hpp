@@ -223,7 +223,8 @@ public:
 		~Setup()
 		{
 			fbo.unbind();
-		}
+			fbo.checkvalidate();
+	}
 	};	
 private:
 	FBO(const FBO & );

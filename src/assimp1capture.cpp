@@ -149,13 +149,15 @@ int main(int argc, char **argv)
 	auto window = glpp::init(width,height,"hello",false);
 		glERR("opengl:after init");
 	Texture trgb,tdepth;
-	trgb.init(GLSize(width,height));
-	trgb.init(GLSize(width,height),GL_RED,GL_UNSIGNED_SHORT);
+	trgb.init(GLSize(width,height),GL_RGB,GL_UNSIGNED_BYTE);
+	tdepth.init(GLSize(width,height),GL_RED,GL_UNSIGNED_SHORT);
 
 	FBO fbo;
-	fbo.init();
-	fbo.attach(trgb);
-	fbo.attachdepth(tdepth);
+	{
+		FBO::Setup s(fbo);
+		fbo.attach(trgb);
+		fbo.attachdepth(tdepth);
+	}
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
 
@@ -290,12 +292,13 @@ int main(int argc, char **argv)
 
 	{
 		GLScope<FBO> s(fbo);
+		glClearColor(1.0,0.0,0.0,1.0);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		for(auto & o : objects)
 			o->render(ms);
 	}
 	trgb.saveOnFile("color.png");
-	tdepth.saveOnFile("depth.png");
+	//tdepth.saveOnFile("depth.png");
 
 	// DATA available in fbo
 	// extract texture
