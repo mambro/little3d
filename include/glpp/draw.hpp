@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h> // memory management
 #include <string>
+#include <memory>
 #include <vector>
 #include <array>
 #include <iostream>
