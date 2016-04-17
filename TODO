@@ -1,0 +1,12 @@
+
+In progress
+- headless EGL
+- micro Three.js STUB
+- framebuffer
+	color has red component AND flipped (due to opengl convention)
+	depth is not yet saved
+
+
+Future
+- ROS with image example
+- JSON with Eigen and OpenCV interop

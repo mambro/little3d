@@ -12,7 +12,6 @@ inline bool checkFramebufferStatus(GLenum status)
     switch(status)
     {
     case GL_FRAMEBUFFER_COMPLETE:
-        std::cout << "FBO: Framebuffer complete." << std::endl;
         return true;
 
     case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
@@ -110,18 +109,49 @@ public:
 	/**
 	 * Color Attachment from allocated texture
 	 */
-	void attach(const Texture & t, int index = 0)
+	void attachcolor(const Texture & t, int index = 0)
 	{
-		size_ = t.size();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
+		if(!t)
+			std::cerr << "FBO attachcolor invalid texture for color attachment " << index << " @fbo " << (GLuint)*this << std::endl;
+		else
+		{
+			size_ = t.size();
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
+			std::cerr << "FBO attachcolor texture for color attachment " << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)*this << std::endl;
+			glERR("attachcolor");
+		}
 	}
 
 	/**
-	 * Depth Attachment
+	 * Depth Attachment: ATTENTION OpenGL ES2 needs GL_DEPTHCOMPONENT16
 	 */
 	void attachdepth(const Texture & t)
 	{
+		if(!t)
+			std::cerr << "FBO attachcolor invalid texture for depth @fbo " << (GLuint)*this << std::endl;
+		else
+		{
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)t, 0);
+			std::cerr << "FBO attachdepth texture for depth attachment " << (GLuint)t  << " @fbo " << (GLuint)*this << std::endl;
+			glERR("attachdepth");
+		}
+	}
+
+	void attach(const ColorTexture & t, int index = 0)
+	{
+		size_ = t.size();
+		glERR("preattachcolor");
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
+		std::cerr << "FBO attachcolor texture for color attachment " << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)*this << std::endl;
+		glERR("attachcolor");
+	}
+
+	void attach(const DepthTexture & t)
+	{
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)t, 0);
+		glERR("attachdepth");
+		std::cerr << "FBO attachdepth texture for depth attachment " << (GLuint)t  << " @fbo " << (GLuint)*this << std::endl;
+		glERR("attachdepth");
 	}
 
 	bool makergb()
@@ -210,6 +240,10 @@ public:
 
 	GLSize size() const { return size_; }
 
+	/**
+	 * Use this scope tool for preparing the FBO. If the FBO is not initialized it is inited, and then bound
+	 * At the end of the bount it is checked
+	 */
 	struct Setup
 	{
 		FBO & fbo;
@@ -222,9 +256,9 @@ public:
 
 		~Setup()
 		{
-			fbo.unbind();
 			fbo.checkvalidate();
-	}
+			fbo.unbind();
+		}
 	};	
 private:
 	FBO(const FBO & );

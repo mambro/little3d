@@ -21,7 +21,6 @@ int main(int argc, char **argv)
 
 	GLImageProc img;
 	Texture tex;
-	tex.init();
 	if(!tex.load(argv[1]))
 		return 0;
 	img.init();

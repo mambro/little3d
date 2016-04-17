@@ -107,14 +107,14 @@ public:
         // float wa = input_reduced ? width / (float)width2 : 1.0;
         // float ha = input_reduced ? height / (float)height2 : 1.0;
         if(output_reduced)
-            texture_.init(GLSize(width2, height2));
+            texture_.initcolor(GLSize(width2, height2));
         else
-            texture_.init(GLSize(width, height));
+            texture_.initcolor(GLSize(width, height));
 
         fbo_.init();
         {
             GLScope<FBO> xfbo(fbo_);
-            fbo_.attach(texture_);
+            fbo_.attachcolor(texture_);
             checkFramebufferStatus(fbo_.validate());
         }
     }

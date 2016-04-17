@@ -1,6 +1,6 @@
 #include "SOIL/SOIL.h"
 #include "stb_image_write.h"
-
+#include "lodepng.h"
 #ifndef COCO_FATAL
 #define COCO_ERR() std::cout
 #define COCO_FATAL() std::cout
@@ -9,6 +9,7 @@
 namespace glpp
 {
 
+#if 0
 class XTexture
 {
 public:
@@ -221,7 +222,7 @@ inline	bool XTexture::load(const char * name, bool expanded)
 		unbind();
 		return true;
 	}
-
+#endif
 
 
 class Texture
@@ -233,7 +234,7 @@ public:
     {
         release();
     }
-    void init(GLSize size = {0, 0}, GLenum format = GL_RGB,
+    void initcolor(GLSize size = {0, 0}, GLenum format = GL_RGBA,
               GLenum type = GL_UNSIGNED_BYTE)
     {
         release();
@@ -251,9 +252,9 @@ public:
         //glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        channels_ = format_ == GL_RED ? 1 : format_ == GL_RGBA || format_ == GL_DEPTH_COMPONENT ? 4 : 3;
+        channels_ = format_ == GL_RED  || format_ == GL_DEPTH_COMPONENT ? 1 : format_ == GL_RGBA ? 4: 3;
     }
-    void initDepth(GLSize size, bool usefloat = true)
+    void initdepth(GLSize size, bool usefloat = true)
     {
         release();
         format_ = GL_DEPTH_COMPONENT;
@@ -288,6 +289,8 @@ public:
             format_ = GL_RGBA;
         else if(channels_ == 1)
             format_ = GL_RED;
+        if(!resource_)
+            glGenTextures(1, &resource_);
         bind();
         glTexImage2D(GL_TEXTURE_2D, 0, format_, size_.width, size_.height,
                      0, format_, type_, img);
@@ -425,21 +428,29 @@ public:
         getDataRaw(buffer);
         switch(type_)
         {
-        case GL_UNSIGNED_SHORT:
-        {
-           // encodeOneStep(filename,buffer,, unsigned width, unsigned height)
-        return false;
-            
-        }
-        case GL_FLOAT:
-        {
-        return false;
+            case GL_UNSIGNED_SHORT:
+            {
+               // encodeOneStep(filename,buffer,, unsigned width, unsigned height)
+               if(channels_ == 1)
+               {
+                lodepng_encode_file(filename.c_str(),&buffer[0],size_.width,size_.height,LCT_GREY,16);
+                return true;
+            }
+            else
+            return false;                
+            }
+            case GL_FLOAT:
+            {
+            return false;
 
-        }
-        case GL_UNSIGNED_BYTE:
-        {
-            stbi_write_png(file_name.c_str(),size_.width, size_.height,channels_,&buffer[0],size_.width*channels_);
-        return true;
+            }
+            case GL_UNSIGNED_BYTE:
+            {
+                stbi_write_png(filename.c_str(),size_.width, size_.height,channels_,&buffer[0],size_.width*channels_);
+            return true;
+            }
+            default:
+            return false;
         }
     }
 
@@ -462,5 +473,20 @@ private:
     int channels_ = 3; // channels for format
     bool flipped_ = false; // stored flipped
 };
+
+// types
+class DepthTexture: public Texture
+{
+public:
+    void init(GLSize size, bool asfloat) { Texture::initdepth(size,asfloat); }
+};
+
+// types
+class ColorTexture: public Texture
+{
+public:
+    void init(GLSize size, bool alpha) { Texture::initcolor(size,alpha ? GL_RGBA: GL_RGB,GL_UNSIGNED_BYTE); }
+};
+
 
 }
