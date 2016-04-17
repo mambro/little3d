@@ -251,24 +251,24 @@ public:
         //glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        channels_ = format_ == GL_RGBA || format_ == GL_DEPTH_COMPONENT ? 4 : 3;
+        channels_ = format_ == GL_RED ? 1 : format_ == GL_RGBA || format_ == GL_DEPTH_COMPONENT ? 4 : 3;
     }
-    void initDepth(GLSize size)
+    void initDepth(GLSize size, bool usefloat = true)
     {
         release();
+        format_ = GL_DEPTH_COMPONENT;
+        channels_ = 1;
+        type_ = usefloat ? GL_FLOAT: GL_UNSIGNED_SHORT;
         size_ = size;
         glGenTextures(1, &resource_);
         glBindTexture(GL_TEXTURE_2D, resource_);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size_.width, size_.height,
-                         0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+                         0, GL_DEPTH_COMPONENT, type_, NULL);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D,0);
-        format_ = GL_DEPTH_COMPONENT;
-        type_ = GL_FLOAT;
-        channels_ = 4; // float
     }
     bool load(const std::string &path)
     {
@@ -284,9 +284,12 @@ public:
             return false;
         }
         //int img_lenght = size_.width * size_.height * channels_ * sizeof(u_int8_t);
-
+        if(channels_ == 4)
+            format_ = GL_RGBA;
+        else if(channels_ == 1)
+            format_ = GL_RED;
         bind();
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size_.width, size_.height,
+        glTexImage2D(GL_TEXTURE_2D, 0, format_, size_.width, size_.height,
                      0, format_, type_, img);
         unbind();
         SOIL_free_image_data(img);
@@ -372,7 +375,6 @@ public:
         glBindTexture(GL_TEXTURE_2D, resource_);
         glTexImage2D(GL_TEXTURE_2D, 0, target_format, size.width,size.height, 0, target_format, GL_UNSIGNED_BYTE, NULL);
         glBindTexture(GL_TEXTURE_2D,0);
-        item_size_ = target_format == GL_RGBA ? 4 : 3;
         format_ = target_format;
         type_ = GL_UNSIGNED_BYTE;
     }
@@ -410,27 +412,35 @@ public:
 
     bool getDataRaw(std::vector<uint8_t> & data) const
     {
-        data.resize(width() * height() * channels_);
+        data.resize(width() * height() * channels_ * (type_ == GL_UNSIGNED_BYTE?1:type_==GL_UNSIGNED_SHORT?2:4));
         glBindTexture(GL_TEXTURE_2D, resource_);
         glGetTexImage(GL_TEXTURE_2D, 0, format_, type_, &data[0]);
         glBindTexture(GL_TEXTURE_2D, 0);
         return true;
     }
-    bool saveOnFile(const std::string &file_name) const
+
+    bool save(const std::string &filename) const
     {
         std::vector<uint8_t> buffer;
         getDataRaw(buffer);
-        int c = type_ == GL_RED ? 1 : type_ == GL_RGB ? 3 : 4;
-        if(type_ == GL_UNSIGNED_SHORT)
+        switch(type_)
         {
-            // 16bit grayscale 
-            stbi_write_png(file_name.c_str(),size_.width, size_.height,c*2,&buffer[0],0);
-        }
-        else
+        case GL_UNSIGNED_SHORT:
         {
-            stbi_write_png(file_name.c_str(),size_.width, size_.height,c,&buffer[0],0);
+           // encodeOneStep(filename,buffer,, unsigned width, unsigned height)
+        return false;
+            
         }
+        case GL_FLOAT:
+        {
+        return false;
+
+        }
+        case GL_UNSIGNED_BYTE:
+        {
+            stbi_write_png(file_name.c_str(),size_.width, size_.height,channels_,&buffer[0],size_.width*channels_);
         return true;
+        }
     }
 
     int width() const { return size_.width; }
@@ -445,14 +455,12 @@ private:
     Texture(const Texture &);
 
     GLuint resource_ = 0;
-    //GLuint unit_ = 0; // 0 ...
-    GLSize size_;
-    GLSize real_size_;
-    GLenum format_ = GL_RGB;
-    GLenum type_ = GL_UNSIGNED_BYTE;
-    int channels_ = 3;
-    bool flipped_ = false;
-    int item_size_ = 4;
+    GLSize size_; // stored size
+    GLSize real_size_; // original size
+    GLenum format_ = GL_RGB; // GL_RGB GL_RED GL_RGBA
+    GLenum type_ = GL_UNSIGNED_BYTE; // GL_FLOAT GL_UNSIGNED_SHORT GL_UNSIGNED_BYTE
+    int channels_ = 3; // channels for format
+    bool flipped_ = false; // stored flipped
 };
 
 }

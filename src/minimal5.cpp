@@ -11,6 +11,9 @@ float angle = 0;
 
 int main(int argc, char **argv)
 {
+	if(argc < 2)
+		return -1;
+	
 	int width = 640;
 	int height = 480;
 	auto window = glpp::init(width,height);
@@ -22,6 +25,8 @@ int main(int argc, char **argv)
 	if(!tex.load(argv[1]))
 		return 0;
 	img.init();
+	if(argc > 2)
+		tex.save(argv[2]);
 	std::cout << "loaded " << tex.size() << " " << tex.realsize() << "  " << tex.flipped() << " res:" << (int)tex << std::endl;
 		glERR("opengl:load");
 

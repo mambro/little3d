@@ -3653,7 +3653,7 @@ static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, in
    return f != NULL;
 }
 
-int stbi_write_bmp(char const *filename, int x, int y, int comp, void *data)
+int xstbi_write_bmp(char const *filename, int x, int y, int comp, void *data)
 {
    int pad = (-x*3) & 3;
    return outfile(filename,-1,-1,x,y,comp,data,0,pad,
@@ -3662,7 +3662,7 @@ int stbi_write_bmp(char const *filename, int x, int y, int comp, void *data)
             40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
 }
 
-int stbi_write_tga(char const *filename, int x, int y, int comp, void *data)
+int xstbi_write_tga(char const *filename, int x, int y, int comp, void *data)
 {
    int has_alpha = !(comp & 1);
    return outfile(filename, -1,-1, x, y, comp, data, has_alpha, 0,

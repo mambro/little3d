@@ -297,8 +297,8 @@ int main(int argc, char **argv)
 		for(auto & o : objects)
 			o->render(ms);
 	}
-	trgb.saveOnFile("color.png");
-	//tdepth.saveOnFile("depth.png");
+	trgb.save("color.png");
+	tdepth.save("depth.png");
 
 	// DATA available in fbo
 	// extract texture

@@ -16,3 +16,12 @@ Requirements:
 - libassimp-dev
 - libeigen3-dev
 - libxrandr-dev
+
+
+-----
+EGL
+https://github.com/alco/EGL_mac_ios
+https://devblogs.nvidia.com/parallelforall/egl-eye-opengl-visualization-without-x-server/
+
+SEE: http://www.x.org/wiki/Events/XDC2014/XDC2014RitgerEGLNonMesa/nvidia-and-compositors.pdf
+SEE: https://github.com/parallel-forall/code-samples/tree/master/posts/egl_OpenGl_without_Xserver
