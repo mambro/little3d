@@ -78,9 +78,7 @@ public:
 	void init()
 	{
 		release();
-#ifndef USE_EGL
 		glGenFramebuffers(1,&resource_);
-#endif
 	}
 
 
@@ -94,23 +92,17 @@ public:
 	{
 		if(resource_)
 		{
-#ifndef USE_EGL
 			glDeleteFramebuffers(1,&resource_);
-#endif
 			resource_ = 0;
 		}
 		if(rboDepthStencil_)
 		{
-#ifndef USE_EGL
 			glDeleteRenderbuffers(1,&rboDepthStencil_);
-#endif
 			rboDepthStencil_ = 0;
 		}
 		if(rboColor_)
 		{
-#ifndef USE_EGL
 			glDeleteRenderbuffers(1,&rboColor_);
-#endif
 			rboColor_ = 0;
 		}
 	}
@@ -125,9 +117,7 @@ public:
 		else
 		{
 			size_ = t.size();
-#ifndef USE_EGL			
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
-#endif
 			std::cerr << "FBO attachcolor texture for color attachment " << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)*this << std::endl;
 			glERR("attachcolor");
 		}
@@ -142,9 +132,7 @@ public:
 			std::cerr << "FBO attachcolor invalid texture for depth @fbo " << (GLuint)*this << std::endl;
 		else
 		{
-#ifndef USE_EGL			
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)t, 0);
-#endif		
 			std::cerr << "FBO attachdepth texture for depth attachment " << (GLuint)t  << " @fbo " << (GLuint)*this << std::endl;
 			glERR("attachdepth");
 		}
@@ -154,18 +142,14 @@ public:
 	{
 		size_ = t.size();
 		glERR("preattachcolor");
-#ifndef USE_EGL			
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
-#endif		
 		std::cerr << "FBO attachcolor texture for color attachment " << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)*this << std::endl;
 		glERR("attachcolor");
 	}
 
 	void attach(const DepthTexture & t)
 	{
-#ifndef USE_EGL			
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)t, 0);
-#endif		
 		glERR("attachdepth");
 		std::cerr << "FBO attachdepth texture for depth attachment " << (GLuint)t  << " @fbo " << (GLuint)*this << std::endl;
 		glERR("attachdepth");
@@ -176,14 +160,12 @@ public:
 		if(size_.width == 0)
 			return false;
 
-#ifndef USE_EGL
 		if(!rboColor_)
 			glGenRenderbuffers(1, &rboColor_);
 		glBindRenderbuffer(GL_RENDERBUFFER, rboColor_);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8,size_.width,size_.height);
 		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER,rboColor_);		
 		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-#endif
 		return true;
 	}
 
@@ -192,14 +174,17 @@ public:
 		if(size_.width == 0)
 			return false;
 
-#ifndef USE_EGL
 		if(!rboDepthStencil_)
 			glGenRenderbuffers(1, &rboDepthStencil_);
 		glBindRenderbuffer(GL_RENDERBUFFER, rboDepthStencil_);
+#ifndef USE_EGL
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,size_.width,size_.height);
 		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER,rboDepthStencil_);		
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+#else
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16,size_.width,size_.height);
+		glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,rboDepthStencil_);		
 #endif
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
 		return true;
 	}
 
@@ -208,7 +193,6 @@ public:
 	/// raw means that 
 	bool getDataRaw(std::vector<uint8_t> & data, ReadFormat f)
 	{
-#ifndef USE_EGL
 		GLenum format = GL_RGB,type = GL_UNSIGNED_BYTE;
 		int size = 1;
 		switch(f)
@@ -217,19 +201,21 @@ public:
 			case Depth: format = GL_DEPTH_COMPONENT; type = GL_FLOAT; size = 4; break;
 		}
 		data.resize(size_.width*size_.height*size);
+#ifndef USE_EGL
 		glBindFramebuffer(GL_READ_FRAMEBUFFER,resource_);
 		glReadPixels(0,0,size_.width,size_.height,format,type,&data[0]);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
-		return true;
 #else
-		return false;
+		glBindFramebuffer(GL_FRAMEBUFFER,resource_);
+		glReadPixels(0,0,size_.width,size_.height,format,type,&data[0]);
+		glBindFramebuffer(GL_FRAMEBUFFER,0);
 #endif
+		return true;
 	}
 
 	/// raw means that 
 	bool getDataRaw(std::vector<float> & data, ReadFormat f)
 	{
-#ifndef USE_EGL
 		GLenum format = GL_RGB,type = GL_UNSIGNED_BYTE;
 		int size = 1;
 		switch(f)
@@ -238,13 +224,16 @@ public:
 			case Depth: format = GL_DEPTH_COMPONENT; type = GL_FLOAT; size = 1; break;
 		}
 		data.resize(size_.width*size_.height*size);
+#ifndef USE_EGL
 		glBindFramebuffer(GL_READ_FRAMEBUFFER,resource_);
 		glReadPixels(0,0,size_.width,size_.height,format,type,&data[0]);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER,0);
-		return true;
 #else
-		return false;
+		glBindFramebuffer(GL_FRAMEBUFFER,resource_);
+		glReadPixels(0,0,size_.width,size_.height,format,type,&data[0]);
+		glBindFramebuffer(GL_FRAMEBUFFER,0);
 #endif
+		return true;
 	}
 
 	void checkvalidate()
@@ -259,16 +248,12 @@ public:
 
 	void bind(GLenum what = GL_FRAMEBUFFER)
 	{
-#ifndef USE_EGL
 		glBindFramebuffer(what,resource_);
-#endif
 	}
 
 	void unbind(GLenum what= GL_FRAMEBUFFER)
 	{
-#ifndef USE_EGL
 		glBindFramebuffer(what,0);
-#endif
 	}
 
 	GLSize size() const { return size_; }
