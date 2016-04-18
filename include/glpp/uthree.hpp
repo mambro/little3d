@@ -1,4 +1,6 @@
 #pragma once
+#include "glpp/draw.hpp"
+#include <Eigen/Geometry>
 
 namespace glpp
 {
@@ -10,6 +12,40 @@ namespace glpp
 		class Material;
 		class Renderer;
 
+		using BBox = Eigen::AlignedBox<float>;
+		using Color4 = Eigen::Vector4f;
+
+		class Plane: public Eigen::Vector4f
+		{
+		public:
+			void set(const Eigen::Vector3f & normal,const Eigen::Vector3f & point);
+
+			// float distance(const Eigen::Vector3f & pt);
+
+			// Plane transform(const Eigen::Transform & pos);
+		};
+
+		class Sphere: public Eigen::Vector4f
+		{
+		public:
+			void set(const Eigen::Vector3f & c, float r);
+		};
+
+		class Frustum
+		{
+		public:
+			/// given abirtrary projection matrix build the clipping planes in WORLD coordinates
+			void fromMatrix(const Eigen::Matrix4f & mtx);
+
+			int intersect(const BBox & bbox) const;
+			int intersect(const Sphere & sphere) const;
+			bool contains(const Eigen::Vector3f & pt) const;
+			// clone
+			// set
+			// copy
+			std::array<Plane,6> planes;
+		};
+
 		class Object3D
 		{
 		public:
@@ -20,11 +56,36 @@ namespace glpp
 			int id;
 			std::shared_ptr<Object3D> parent;
 			std::vector<std::shared_ptr<Object3D> > children;
-			Eigen::Transform pose;
+			Eigen::Transform pose; // in parent
+			BBox bboxLocal; // TBD
+			BBox bboxWorld; // TBD
 			Eigen::Matrix4 local2parent;
 			Eigen::Matrix4 local2world;
 			bool visible = true;
+			bool invalidWorld;
+
+			void invalidateWorld();
+
+			void updateWorld();
+
+			void updateWorld(std::shared_ptr<Object3D> p);
+
+			void add(std::shared_ptr<Object3D> x);
+
+			virtual Object3D * clone() const { return nullptr; }
 		};		
+
+		class Light: public Object3D
+		{
+		};
+
+		class DirectionalLight: public Light
+		{
+		};
+
+		class SpotLight: public Light
+		{
+		};
 
 		class Material
 		{
@@ -34,12 +95,17 @@ namespace glpp
 		class MeshBasicMaterial: public Material
 		{
 		public:
-			// color
-			// wireframe
+			bool wireframe;
+			Color4 color;
 			// shading
 			// vertexColors
 			// fog
 			// ...
+		};
+
+		class MeshPhongMaterial: public Material
+		{
+
 		};
 
 		class Geometry
@@ -47,10 +113,19 @@ namespace glpp
 		public:
 			std::string name;
 			int id;
-			// vertices
+			Eigen::AlignedBox<float> bbox;
+			Eigen::Matrix<float,Eigen::Dynamic,3> vertices; // +normals + texture coords
+			Eigen::Matrix<int,Eigen::Dynamic,3> triangles;
+
+			void updateGL();
+
+			void updateBBox();
+
 			// colors
 			// faces
-			// bbox bsphere
+			// bsphere
+		protected:
+			// VBO / TBO
 		};		
 
 		class Camera: public Object3D
@@ -59,7 +134,10 @@ namespace glpp
 			Eigen::Matrix4f matrixWorldinverse;
 			Eigen::Matrix4f projectionMatrix;
 
-			// lookAt
+			void lookAt(Eigen::Vector3f eye, Eigen::Vector3f center, Eigen::Vector3f up);
+			virtual void updateProjectionMatrix() = 0;
+
+
 			// getWorldDirection
 			// clone
 			// copy 
@@ -68,10 +146,25 @@ namespace glpp
 		class PerspectiveCamera: public Camera
 		{
 		public:
+			float fovy;
+			float ration;
+			Eigen::Vector2f nearfar;
 			// NOTE: camera.setViewOffset + MISSING oblique
-			// updateProjectionMatrix 
+			void updateProjectionMatrix();
+
+//			PerspectiveCamera * clone() const override { return new PerspectiveCamera(); }
 		};		
 
+		class OrthograpicCamera: public Camera
+		{
+		public:
+			float ration;
+			Eigen::Vector2f nearfar;
+			// NOTE: camera.setViewOffset + MISSING oblique
+			void updateProjectionMatrix();
+
+//			OrthograpicCamera * clone() const override { return new OrthograpicCamera(); }
+		};		
 
 		class Mesh: public Object3D
 		{
@@ -80,7 +173,21 @@ namespace glpp
 
 			// raycast
 			// clone
-		};		
+
+			std::shared_ptr<Geometry> geometry;
+			std::shared_ptr<Material> material;
+		};	
+
+		class Texture
+		{
+
+		};
+
+		// FBO
+		class RenderTarget
+		{
+
+		};
 
 		class Renderer
 		{
@@ -89,7 +196,11 @@ namespace glpp
 			// control Stencil
 			// control ClearColor
 			// manual clear
-			void render ( scene, camera, renderTarget, forceClear );
+			void render (std::shared_ptr<Object3D> scene, std::shared_ptr<Camera> camera); //, renderTarget, forceClear );
+		protected:
+			void collect(Object3D * o);
+			std::map<Material*,std::list<Mesh*>> renderable;
+			std::list<Light*> lights;
 		};
 	}
 }
