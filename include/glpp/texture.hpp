@@ -320,7 +320,9 @@ public:
                        data_type,  // Image data type
                        image
                      );        // The actual image data itself
+#ifndef USE_EGL
         glGenerateMipmap(GL_TEXTURE_2D);
+#endif
         int w, h;
         glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
         glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);

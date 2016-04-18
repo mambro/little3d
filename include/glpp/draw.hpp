@@ -1,6 +1,12 @@
 #pragma once
 
-
+#ifdef USE_EGL
+#define GL_GLEXT_PROTOTYPES
+#include "EGL/egl.h"
+#include "GLES2/gl2.h"
+#else
+#include <glew.h>
+#endif
 //#include "SOIL.h"
 #include <stdio.h>
 #include <stdlib.h> // memory management
@@ -55,15 +61,16 @@ struct ImageFormat
     static const GLenum Type = TType;
 };
 
+#ifndef USE_EGL
 typedef ImageFormat<1, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE> U8C1;
 typedef ImageFormat<2, GL_R16I, GL_RED_INTEGER, GL_SHORT> S16C1;
 typedef ImageFormat<2, GL_R16UI, GL_RED_INTEGER, GL_UNSIGNED_SHORT> U16C1;
 typedef ImageFormat<4, GL_R32F, GL_RED, GL_FLOAT> F32C1;
 typedef ImageFormat<8, GL_RG32F, GL_RG, GL_FLOAT> F32C2;
 typedef ImageFormat<12, GL_RGB32F, GL_RGB, GL_FLOAT> F32C3;
-typedef ImageFormat<4, GL_RGBA, GL_BGRA, GL_UNSIGNED_BYTE> F8C4;
 typedef ImageFormat<16, GL_RGBA32F, GL_RGBA, GL_FLOAT> F32C4;
-
+#endif
+typedef ImageFormat<4, GL_RGBA, GL_BGRA, GL_UNSIGNED_BYTE> F8C4;
 
 struct GLSize
 {
@@ -268,13 +275,16 @@ private:
 };
 
 
+#ifndef USE_EGL
 inline void memcpyVBO(GLuint dst, GLuint src, int soff, int woff, int size)
 {
 	glBindBuffer(GL_COPY_READ_BUFFER, dst);
 	glBindBuffer(GL_COPY_WRITE_BUFFER, src);
 	glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, soff,woff,size);
 }
+#endif
 
+#ifndef USE_EGL
 class DualPBO
 {
 public:
@@ -370,7 +380,7 @@ private:
 	GLsync fences[N];
 	VBO<N> pbos;
 };
-
+#endif
 /**
  * VAO class, one single VAO
  */
@@ -382,15 +392,21 @@ public:
 	void init()
 	{
 		release();
+#ifndef USE_EGL
 		glGenVertexArrays (1, &resource_);		
+#endif
 	}
 	void bind()
 	{
+#ifndef USE_EGL
 	  	glBindVertexArray (resource_);		
+#endif
 	}
 	void unbind()
 	{
+#ifndef USE_EGL
 		glBindVertexArray(0);
+#endif
 	}
 	operator GLuint ()
 	{
@@ -404,7 +420,9 @@ public:
 	{
 		if(resource_)
 		{
+#ifndef USE_EGL
 			glDeleteVertexArrays(1,&resource_);
+#endif
 			resource_ = 0;
 		}
 	}
@@ -472,7 +490,9 @@ template<>
 struct GLScope<VAO>
 {
 	GLScope(VAO & x) { x.bind(); }
+#ifndef USE_EGL
 	~GLScope() { glBindVertexArray(0); }
+#endif
 };
 
 /**
@@ -485,8 +505,9 @@ struct GLScope<FBO>
 
 
 	}
+#ifndef USE_EGL
 	~GLScope() { glBindFramebuffer(_mode,0); }
-
+#endif
 	// for syntax: if(GLScope<FBO> _ = pippo)
 	operator bool() { return true; }
 	GLViewportScope _view;
@@ -569,7 +590,13 @@ inline void xglBackSide()
 		glERR("opengl:init3dpre bound");
 		bool samesize = xsize == extent;
 		GLenum type =  isfloat ? GL_FLOAT : rgba ? GL_UNSIGNED_INT_8_8_8_8_REV : GL_UNSIGNED_BYTE;
+#ifndef USE_EGL
 		 GLenum internalformat = (rgba? (isfloat?GL_RGBA32F:GL_RGBA8): (isfloat? GL_R32F:GL_R8));
+#else
+		if(isfloat || !rgba)
+			return false;
+		 GLenum internalformat = GL_RGBA8;
+#endif
 		glERR("opengl:init3dpre");
 		   glTexImage3D(GL_TEXTURE_3D,0,
 		   		// internalformat

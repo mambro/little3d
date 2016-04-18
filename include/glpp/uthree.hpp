@@ -196,7 +196,7 @@ namespace glpp
 			// control Stencil
 			// control ClearColor
 			// manual clear
-			void render (std::shared_ptr<Object3D> scene, std::shared_ptr<Camera> camera); //, renderTarget, forceClear );
+			void render (std::shared_ptr<Object3D> scene, std::shared_ptr<Camera> camera, std::shared_ptr<RenderTarget>); //, renderTarget, forceClear );
 		protected:
 			void collect(Object3D * o);
 			std::map<Material*,std::list<Mesh*>> renderable;

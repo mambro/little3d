@@ -1,5 +1,11 @@
 #pragma once
+#ifdef USE_EGL
+#define GL_GLEXT_PROTOTYPES
+#include "EGL/egl.h"
+#include "GLES2/gl2.h"
+#else
 #include <glew.h>
+#endif
 #include <GLFW/glfw3.h>
 
 namespace glpp
@@ -29,11 +35,13 @@ namespace glpp
 
 		glfwMakeContextCurrent(window);
 
+#ifndef USE_EGL
 		glewExperimental = true; // Needed for core profile
 		if (glewInit() != GLEW_OK) 
 		{
 			return 0;
 		}
+#endif
 		//glERR("glew:init");
 
 		// Ensure we can capture the escape key being pressed below

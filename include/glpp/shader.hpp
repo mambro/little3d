@@ -223,9 +223,10 @@ inline bool Shader::load(const char * vertex_file_path,const char * fragment_fil
 	GLuint GeoShaderID = 0;
 	if(fragment_file_path != 0 && fragment_file_path[0] != 0)
 		FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+#ifndef USE_EGL	
 	if(geo_file_path != 0 && geo_file_path[0] != 0)
 		GeoShaderID = glCreateShader(GL_GEOMETRY_SHADER);
-
+#endif
 
 	// Read the Vertex Shader code from the file
 	std::string VertexShaderCode;
@@ -348,10 +349,12 @@ inline bool Shader::load(const char * vertex_file_path,const char * fragment_fil
 	glAttachShader(programID, FragmentShaderID);
 	if(GeoShaderID)
 		glAttachShader(programID, GeoShaderID);
+#ifndef USE_EGL
 	if(ncaptures)
 	{
 		glTransformFeedbackVaryings(programID, ncaptures, captures, GL_INTERLEAVED_ATTRIBS);		
 	}
+#endif
 	glLinkProgram(programID);
 
 	glGetProgramiv(programID, GL_LINK_STATUS, &Result);
