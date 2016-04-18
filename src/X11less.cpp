@@ -1,5 +1,8 @@
 // See http://arrayfire.com/remote-off-screen-rendering-with-opengl/
 // 
+#define USE_EGL_GET_DISPLAY
+#define USE_EGL_SURFACE
+
 #ifdef USE_EGL_GET_DISPLAY
 #include <EGL/egl.h>
 #else
@@ -13,7 +16,8 @@
           EGL_BLUE_SIZE, 8,
           EGL_GREEN_SIZE, 8,
           EGL_RED_SIZE, 8,
-          EGL_DEPTH_SIZE, 8,
+          EGL_DEPTH_SIZE,EGL_DONT_CARE,
+	  EGL_ALPHA_SIZE,EGL_DONT_CARE, 
           EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
           EGL_NONE
   };    
@@ -62,32 +66,43 @@ printf("Devices %d with device %p\n",numDevices,devices[0]);
     EGLDisplay eglDpy = eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT, devices[0], 0);
 #endif    
 
-printf("Display %p\n",eglDpy);
+printf("Display from eglGetPlatformDisplay is %p\n",eglDpy);
   EGLint major=0, minor=0;
 
-  eglInitialize(eglDpy, &major, &minor);
+  int r = eglInitialize(eglDpy, &major, &minor);
 
-printf("Found %d %d\n",major,minor);
+printf("eglInitialize result %d Found %d %d Error %X\n",r,major,minor,eglGetError());
 
   // 2. Select an appropriate configuration
   EGLint numConfigs;
   EGLConfig eglCfg;
 
   eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs);
-
+printf("Available configs %d\n",numConfigs);
   // 3. Create a surface
-  EGLSurface eglSurf = eglCreatePbufferSurface(eglDpy, eglCfg, 
+  
+ // 3. Bind the API 
+    eglBindAPI(EGL_OPENGL_API);
+
+    // 4. create the context
+    EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT, NULL);
+
+EGLSurface eglSurf = eglCreatePbufferSurface(eglDpy, eglCfg, 
                                                pbufferAttribs);
+printf("Surface is %p\n",eglSurf);
 
-  // 4. Bind the API
-  eglBindAPI(EGL_OPENGL_API);
+#ifdef USE_EGL_SURFACE
+    // 5. create the surface and make the context current current
+    eglMakeCurrent(eglDpy, eglSurf, eglSurf, eglCtx);
+#else
+    // 5. make the context current without a surface
+    eglMakeCurrent(eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, eglCtx);
+#endif
 
-  // 5. Create a context and make it current
-  EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT,                       NULL);
-printf("Context %p\n",eglCtx);
-  eglMakeCurrent(eglDpy, eglSurf, eglSurf, eglCtx);
+  
 
-  // from now on use your OpenGL context
+
+// from now on use your OpenGL context
 
   // 6. Terminate EGL when finished
   eglTerminate(eglDpy);
