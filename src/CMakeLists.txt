@@ -16,5 +16,5 @@ add_executable(assimp1capture assimp1capture.cpp)
 target_link_libraries(assimp1capture SOIL p::assimp)
 
 #check if p::egl
-#add_executable(X11less X11less.cpp)
-#target_link_libraries(X11less EGL)
+add_executable(X11less X11less.cpp)
+target_link_libraries(X11less EGL)

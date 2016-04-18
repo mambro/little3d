@@ -18,7 +18,7 @@
           EGL_RED_SIZE, 8,
           EGL_DEPTH_SIZE,EGL_DONT_CARE,
 	  EGL_ALPHA_SIZE,EGL_DONT_CARE, 
-          EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+          EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
           EGL_NONE
   };    
 
@@ -78,11 +78,47 @@ printf("eglInitialize result %d Found %d %d Error %X\n",r,major,minor,eglGetErro
   EGLConfig eglCfg;
 
   eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs);
-printf("Available configs %d\n",numConfigs);
+printf("!Available configs %d\n",numConfigs);
+if(numConfigs == 0)
+{
+static const size_t CONFIG_COUNT = 128;
+EGLConfig configs[CONFIG_COUNT];
+
+// Get configs
+if ( !eglGetConfigs(eglDpy, configs, CONFIG_COUNT, &numConfigs) )
+{
+printf("eglGetConfigs fail\n");
+   return EGL_FALSE;
+}
+else if( numConfigs == 0 )
+{
+   return EGL_FALSE;
+}
+printf("Found %d\n",numConfigs);
+for(int i = 0; i < numConfigs; i++)
+{
+EGLConfig c = configs[i];
+EGLint configAttribs[] = {
+          EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+          EGL_RED_SIZE, 8,
+          EGL_DEPTH_SIZE,EGL_DONT_CARE,
+          EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+EGL_CONFIG_ID,0,
+          EGL_NONE
+  };
+for(int j = 0; j < sizeof(configAttribs)/sizeof(configAttribs[0]); j+=2)
+eglGetConfigAttrib(eglDpy,c,configAttribs[j],&configAttribs[j+1]);
+printf("Config %d - red bits %d, id %d, surface %X, render %X, depth %d\n",
+i,configAttribs[2+1],configAttribs[8+1],configAttribs[0+1],configAttribs[6+1],configAttribs[4+1]);
+EGLint x;
+eglGetConfigAttrib(eglDpy,c,EGL_SURFACE_TYPE,&x);
+//printf("\tAPI %02X\n", x);
+}
+}
   // 3. Create a surface
   
  // 3. Bind the API 
-    eglBindAPI(EGL_OPENGL_API);
+    eglBindAPI(EGL_OPENGL_ES_API);
 
     // 4. create the context
     EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT, NULL);
