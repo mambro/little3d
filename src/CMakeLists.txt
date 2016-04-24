@@ -15,6 +15,18 @@ target_link_libraries(assimp1 p::assimp)
 add_executable(assimp1capture assimp1capture.cpp)
 target_link_libraries(assimp1capture SOIL p::assimp)
 
+#TBC
+#add_executable(assimp1deferred assimp1deferred.cpp)
+#target_link_libraries(assimp1deferred SOIL p::assimp)
+
+#TBC
+if(UTHREE)
+add_library(uthree SHARED uthree.cpp)
+
+add_executable(uthree1 uthree1.cpp)
+target_link_libraries(uthree1 uthree)
+endif()
+
 #check if p::egl
 if(TARGET p::egl)
 add_executable(X11less X11less.cpp)

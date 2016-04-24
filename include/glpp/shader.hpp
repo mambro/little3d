@@ -1,6 +1,5 @@
 #pragma once
 
-
 #define GLSL150(src) "#version 150 core\n" #src
 #define GLSL330(src) "#version 330\n" #src
 #define GLSL(src) #src

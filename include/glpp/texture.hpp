@@ -234,19 +234,19 @@ public:
     {
         release();
     }
-    void initcolor(GLSize size = {0, 0}, GLenum format = GL_RGBA,
-              GLenum type = GL_UNSIGNED_BYTE)
+    void initcolor(GLSize size = {0, 0}, GLenum internalFormat = GL_RGBA,
+              GLenum externalFormat = GL_RGBA,GLenum type = GL_UNSIGNED_BYTE)
     {
         release();
         size_ = size;
-        format_ = format;
-        type_ = GL_UNSIGNED_BYTE;
+        format_ = internalFormat;
+        type_ = type;
 
         glGenTextures(1, &resource_);
         //glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, resource_);
-        glTexImage2D(GL_TEXTURE_2D, 0, format_, size.width, size.height,
-                     0, format, type, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.width, size.height,
+                     0, externalFormat, type, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         //glGenerateMipmap(GL_TEXTURE_2D);

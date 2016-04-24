@@ -10,11 +10,19 @@
 
 namespace glpp
 {
-	inline  GLFWwindow*  init(int width,int height, const char * title = "tmp", bool visible = true)
+	struct XGLFWwindow
+	{
+		GLFWwindow * window = 0;
+		int innerWidth,innerHeight;
+		float devicePixelRatio;
+		float innerRatio;
+	};
+
+	inline  XGLFWwindow  init(int width,int height, const char * title = "tmp", bool visible = true)
 	{
 		if( !glfwInit() )
 		{
-			return 0;
+			return XGLFWwindow();
 		}
 
 		//glfwWindowHint(GLFW_SAMPLES, 4);
@@ -30,7 +38,7 @@ namespace glpp
 		if( window == NULL )
 		{
 			glfwTerminate();
-			return 0;
+			return XGLFWwindow();
 		}
 
 		glfwMakeContextCurrent(window);
@@ -39,7 +47,7 @@ namespace glpp
 		glewExperimental = true; // Needed for core profile
 		if (glewInit() != GLEW_OK) 
 		{
-			return 0;
+			return XGLFWwindow();
 		}
 #endif
 		//glERR("glew:init");
@@ -55,6 +63,19 @@ namespace glpp
 		glEnable(GL_CULL_FACE);
 	 
 		glClearColor(0.0f, 0.0f, 0.2f, 0.0f);	
-		return window;
+		auto monitor = glfwGetWindowMonitor(window);
+		int widthMM, heightMM;
+		glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		const double ppmm = mode->width / (float)widthMM; // pixel per mm
+
+		XGLFWwindow r;
+		r.window = window;
+		r.innerWidth = width;
+		r.innerHeight = height;
+		r.innerRatio = width/(float)height;
+		r.ppmm = ppmm;
+		//r.devicePixelRatio = 0;
+		return r;
 	}
 }
