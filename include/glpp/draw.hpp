@@ -1,3 +1,8 @@
+/**
+ * OpenGL 3.3+ and some OpenGL ES 2.0+ helpers in C++
+ *
+ * Emanuele Ruffaldi 2014-2016
+ */
 #pragma once
 
 #ifdef USE_EGL
@@ -18,13 +23,16 @@
 #include <fstream>
 #include <algorithm>
 #include "glpp/strictgl.hpp"
+#include "glpp/ioutils.hpp"
+#include "shader.hpp"
 #ifdef BOOST_LOG
 #include <boost/log/trivial.hpp>
 #else
 #define BOOST_LOG_TRIVIAL(x) std::cout
 #endif
-#include "glpp/ioutils.hpp"
 
+
+/// dumps the OpenGL error with text
 inline bool glERR(const char * name)
 {
 	//BOOST_LOG_NAMED_SCOPE("GL");
@@ -38,39 +46,40 @@ inline bool glERR(const char * name)
     return r;
 }
 
-#include "shader.hpp"
 
 namespace glpp
 {
 
-inline int
-pow2roundup (int x)
+inline int pow2roundup (int x)
 {
 	int result = 1;
 	while (result < x) result <<= 1;
 	return result;
 }
 
-/// from libfreenect2
-template<size_t TBytesPerPixel, GLenum TInternalFormat, GLenum TFormat, GLenum TType>
+/// A wrapper for image formats in OpenGL taken from libfreenect2, enhanced with Channels
+template<size_t TBytesPerPixel, GLenum TInternalFormat, GLenum TFormat, GLenum TType, size_t TChannels>
 struct ImageFormat
 {
     static const size_t BytesPerPixel = TBytesPerPixel;
     static const GLenum InternalFormat = TInternalFormat;
     static const GLenum Format = TFormat;
     static const GLenum Type = TType;
+    static const int Channels = TChannels;
 };
 
 #ifndef USE_EGL
-typedef ImageFormat<1, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE> U8C1;
-typedef ImageFormat<2, GL_R16I, GL_RED_INTEGER, GL_SHORT> S16C1;
-typedef ImageFormat<2, GL_R16UI, GL_RED_INTEGER, GL_UNSIGNED_SHORT> U16C1;
-typedef ImageFormat<4, GL_R32F, GL_RED, GL_FLOAT> F32C1;
-typedef ImageFormat<8, GL_RG32F, GL_RG, GL_FLOAT> F32C2;
-typedef ImageFormat<12, GL_RGB32F, GL_RGB, GL_FLOAT> F32C3;
-typedef ImageFormat<16, GL_RGBA32F, GL_RGBA, GL_FLOAT> F32C4;
+typedef ImageFormat<1, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE,1> U8C1;
+typedef ImageFormat<2, GL_R16I, GL_RED_INTEGER, GL_SHORT,1> S16C1;
+typedef ImageFormat<2, GL_R16UI, GL_RED_INTEGER, GL_UNSIGNED_SHORT,1> U16C1;
+typedef ImageFormat<4, GL_R32F, GL_RED, GL_FLOAT,1> F32C1;
+typedef ImageFormat<8, GL_RG32F, GL_RG, GL_FLOAT,2> F32C2;
+typedef ImageFormat<12, GL_RGB32F, GL_RGB, GL_FLOAT,3> F32C3;
+typedef ImageFormat<16, GL_RGBA32F, GL_RGBA, GL_FLOAT,4> F32C4;
 #endif
-typedef ImageFormat<4, GL_RGBA, GL_BGRA, GL_UNSIGNED_BYTE> F8C4;
+typedef ImageFormat<4, GL_RGBA, GL_BGRA, GL_UNSIGNED_BYTE,4> F8C4;
+
+
 
 struct GLSize
 {
@@ -94,7 +103,6 @@ inline std::ostream & operator << (std::ostream & ons, const GLSize & x)
 	return ons;
 }
 
-
 inline GLSize nextpow2(GLSize sz)
 {
 	return GLSize(pow2roundup(sz.width),pow2roundup(sz.height));
@@ -104,10 +112,11 @@ inline GLSize nextpow2(GLSize sz)
 }
 
 #include "texture.hpp"
-
 #include "offline.hpp"
 
 namespace glpp {
+
+
 /**
  * Query Class
  */
@@ -285,6 +294,10 @@ inline void memcpyVBO(GLuint dst, GLuint src, int soff, int woff, int size)
 #endif
 
 #ifndef USE_EGL
+
+/**
+ * Dual Pixel Buffer Object used for Multi-thread transfers
+ */
 class DualPBO
 {
 public:
@@ -323,6 +336,9 @@ private:
 	VBO<2> pbos;
 };
 
+/**
+ * Multiple PBO with fences
+ */
 template <int N>
 class MultiPBOFenced
 {
@@ -381,6 +397,7 @@ private:
 	VBO<N> pbos;
 };
 #endif
+
 /**
  * VAO class, one single VAO
  */
@@ -392,21 +409,15 @@ public:
 	void init()
 	{
 		release();
-#ifndef USE_EGL
 		glGenVertexArrays (1, &resource_);		
-#endif
 	}
 	void bind()
 	{
-#ifndef USE_EGL
 	  	glBindVertexArray (resource_);		
-#endif
 	}
 	void unbind()
 	{
-#ifndef USE_EGL
 		glBindVertexArray(0);
-#endif
 	}
 	operator GLuint ()
 	{
@@ -420,9 +431,7 @@ public:
 	{
 		if(resource_)
 		{
-#ifndef USE_EGL
 			glDeleteVertexArrays(1,&resource_);
-#endif
 			resource_ = 0;
 		}
 	}
@@ -432,8 +441,26 @@ private:
 
 };
 
+//----------------------------------------------------------------------------
+// Scope Based Tools
+//----------------------------------------------------------------------------
+
 /**
- * Scope for Viewport set and restore
+ * Generic Scope
+ */
+template<class T>
+struct GLScope
+{
+	GLScope(T & x, GLenum mode): x_(x),mode_(mode) { x.bind(mode); }
+
+	~GLScope() { x_.unbind(mode_); }
+
+	T & x_;
+	GLenum mode_;
+};
+
+/**
+ * Scoped Viewport with automatic reset
  */
 struct GLViewportScope
 {
@@ -442,6 +469,7 @@ struct GLViewportScope
 		glGetIntegerv(GL_VIEWPORT,view);
 		glViewport(x,y,w,h);
 	}
+
 	GLViewportScope(GLSize sz): GLViewportScope(0,0,sz.width,sz.height)
 	{
 	}
@@ -459,22 +487,7 @@ struct GLViewportScope
 };
 
 /**
- * Generic Scope
- */
-template<class T>
-struct GLScope
-{
-	GLScope(T & x, GLenum mode): x_(x),mode_(mode) { x.bind(mode); }
-
-	~GLScope() { x_.unbind(mode_); }
-
-	T & x_;
-	GLenum mode_;
-};
-
-
-/**
- * Scope for Shader
+ * Scope for Shader == glUseProgram
  */
 template<>
 struct GLScope<Shader>
@@ -484,7 +497,7 @@ struct GLScope<Shader>
 };
 
 /**
- * Scope for VAO
+ * Scope for VAO == glBindVertexArray
  */
 template<>
 struct GLScope<VAO>
@@ -494,7 +507,7 @@ struct GLScope<VAO>
 };
 
 /**
- * Scope for VAO
+ * Scope for FBO == glBindFramebuffer + viewport
  */
 template<>
 struct GLScope<FBO>
@@ -511,7 +524,7 @@ struct GLScope<FBO>
 };
 
 /**
- * Scope for VBO<n> with unit specification
+ * Scope for VBO<n> == glBindBuffer
  */
 template<int n>
 struct GLScope<VBO<n> >
@@ -522,7 +535,7 @@ struct GLScope<VBO<n> >
 };
 
 /**
- * Scope for VBO<n> with unit specification
+ * Scope for VBO<1>
  */
 template<>
 struct GLScope<VBO<1> >
@@ -532,6 +545,9 @@ struct GLScope<VBO<1> >
 	GLenum mode_;
 };
 
+/**
+ * Enables a variable with restore in scope
+ */
 template <GLenum x>
 struct GLScopeEnable
 {
@@ -539,6 +555,9 @@ struct GLScopeEnable
 	~GLScopeEnable() { glDisable(x); }
 };
 
+/**
+ * Disable a variable with restore in scope
+ */
 template <GLenum x>
 struct GLScopeDisable
 {
@@ -546,6 +565,9 @@ struct GLScopeDisable
 	~GLScopeDisable() { glEnable(x); }
 };
 
+/**
+ * Specialization for Depth writing
+ */
 template <>
 struct GLScopeDisable<GL_DEPTH_WRITEMASK>
 {
@@ -553,6 +575,9 @@ struct GLScopeDisable<GL_DEPTH_WRITEMASK>
 	~GLScopeDisable() { glDepthMask(GL_TRUE); }
 };
 
+/**
+ * Specialization for Color writing
+ */
 template <>
 struct GLScopeDisable<GL_COLOR_WRITEMASK>
 {
@@ -566,7 +591,8 @@ struct GLScopeDisable<GL_COLOR_WRITEMASK>
 template<>
 struct GLScope<Texture>
 {
-	GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0) :  unit_(unit), mode_(mode) { 
+	GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0) :  unit_(unit), mode_(mode) 
+	{ 
 		x.bind(mode,unit);
 	}
 
@@ -583,6 +609,7 @@ struct GLScope<Texture>
 	GLenum mode_;
 };
 
+/// Scope for sampler
 template<>
 struct GLScope<Sampler>
 {
@@ -592,7 +619,7 @@ struct GLScope<Sampler>
 	int unit_;
 };
 
-
+/// helper to specify front side rendering
 inline void xglFrontSide()
 {
 	glEnable(GL_CULL_FACE);
