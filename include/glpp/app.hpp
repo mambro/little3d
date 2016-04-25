@@ -16,6 +16,9 @@ namespace glpp
 		int innerWidth,innerHeight;
 		float devicePixelRatio;
 		float innerRatio;
+		float ppmm; // pixerl per millimeter
+
+		operator GLFWwindow* () { return window; }
 	};
 
 	inline  XGLFWwindow  init(int width,int height, const char * title = "tmp", bool visible = true)
@@ -64,18 +67,26 @@ namespace glpp
 	 
 		glClearColor(0.0f, 0.0f, 0.2f, 0.0f);	
 		auto monitor = glfwGetWindowMonitor(window);
-		int widthMM, heightMM;
-		glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
-		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-		const double ppmm = mode->width / (float)widthMM; // pixel per mm
-
 		XGLFWwindow r;
 		r.window = window;
 		r.innerWidth = width;
 		r.innerHeight = height;
 		r.innerRatio = width/(float)height;
-		r.ppmm = ppmm;
+
+		int widthMM, heightMM;
+		if(monitor)
+		{
+			glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+			if(mode)
+			{
+				const double ppmm = mode->width / (float)widthMM; // pixel per mm
+				r.ppmm = ppmm;
+			}
+		}
+
 		//r.devicePixelRatio = 0;
 		return r;
 	}
+
 }

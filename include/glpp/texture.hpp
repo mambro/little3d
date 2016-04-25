@@ -490,5 +490,54 @@ public:
     void init(GLSize size, bool alpha) { Texture::initcolor(size,alpha ? GL_RGBA: GL_RGB,GL_UNSIGNED_BYTE); }
 };
 
+/// Texture sampler overrides Texture parameters attached to the same Texture unit
+class Sampler
+{
+public:
+    Sampler(): resource_(0) {  }
+
+    void init()
+    {
+        release();
+        glGenSamplers (1, &resource_);       
+    }
+
+    // setter
+    void seti(GLenum param, int value)
+    {
+        glSamplerParameteri(resource_,param,value);
+    }
+
+    void bind(int unit)
+    {
+        glBindSampler(unit,resource_);
+    }
+
+    void unbind(int unit)
+    {
+        glBindSampler(unit,0);
+    }
+
+    void release()
+    {
+        if(resource_)
+        {
+            glDeleteSamplers(1,&resource_);
+        }
+    }
+
+    operator GLuint ()
+    {
+        return resource_;
+    }
+
+    ~Sampler()
+    {
+        release();
+    }
+private:
+    Sampler(const Sampler&);
+    GLuint resource_;
+};
 
 }

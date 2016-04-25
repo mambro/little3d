@@ -490,9 +490,7 @@ template<>
 struct GLScope<VAO>
 {
 	GLScope(VAO & x) { x.bind(); }
-#ifndef USE_EGL
 	~GLScope() { glBindVertexArray(0); }
-#endif
 };
 
 /**
@@ -501,13 +499,11 @@ struct GLScope<VAO>
 template<>
 struct GLScope<FBO>
 {	
-	GLScope(FBO & x, GLenum mode = GL_FRAMEBUFFER) : _view(x.size()), _mode(mode) { x.bind(mode); 
-
-
+	GLScope(FBO & x, GLenum mode = GL_FRAMEBUFFER) : _view(x.size()), _mode(mode) 
+	{ 
+		x.bind(mode); 
 	}
-#ifndef USE_EGL
 	~GLScope() { glBindFramebuffer(_mode,0); }
-#endif
 	// for syntax: if(GLScope<FBO> _ = pippo)
 	operator bool() { return true; }
 	GLViewportScope _view;
@@ -550,17 +546,50 @@ struct GLScopeDisable
 	~GLScopeDisable() { glEnable(x); }
 };
 
+template <>
+struct GLScopeDisable<GL_DEPTH_WRITEMASK>
+{
+	GLScopeDisable() { glDepthMask(GL_FALSE); }
+	~GLScopeDisable() { glDepthMask(GL_TRUE); }
+};
+
+template <>
+struct GLScopeDisable<GL_COLOR_WRITEMASK>
+{
+	GLScopeDisable() { glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); }
+	~GLScopeDisable() { glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); }
+};
+
 /**
  * Scope for Texture with unit specification
  */
 template<>
 struct GLScope<Texture>
 {
-	GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0):  mode_(mode) { x.bind(mode,unit);}
-	GLScope(GLuint x, GLenum mode, int unit = 0):  mode_(mode) { glActiveTexture(GL_TEXTURE0+unit); glBindTexture(mode,x); }
-	~GLScope() { glBindTexture(mode_,0); }
+	GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0) :  unit_(unit), mode_(mode) { 
+		x.bind(mode,unit);
+	}
 
+	GLScope(GLuint x, GLenum mode = GL_TEXTURE_2D, int unit = 0):   unit_(unit), mode_(mode) { 
+		glActiveTexture(GL_TEXTURE0+unit); 
+		glBindTexture(mode,x); 
+	}
+	~GLScope() { 
+		glActiveTexture(GL_TEXTURE0+unit_);
+		glBindTexture(mode_,0); 
+	}
+
+	int unit_;
 	GLenum mode_;
+};
+
+template<>
+struct GLScope<Sampler>
+{
+	GLScope(Sampler & x,  int unit = 0):  unit_(unit) { x.bind(unit);}
+	~GLScope() { glBindSampler(unit_,0); }
+
+	int unit_;
 };
 
 

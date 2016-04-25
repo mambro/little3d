@@ -16,8 +16,8 @@ add_executable(assimp1capture assimp1capture.cpp)
 target_link_libraries(assimp1capture SOIL p::assimp)
 
 #TBC
-#add_executable(assimp1deferred assimp1deferred.cpp)
-#target_link_libraries(assimp1deferred SOIL p::assimp)
+add_executable(assimp1deferred assimp1deferred.cpp)
+target_link_libraries(assimp1deferred SOIL p::assimp)
 
 #TBC
 if(UTHREE)
