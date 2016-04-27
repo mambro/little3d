@@ -81,7 +81,10 @@ public:
 	{
 		GLint r = glGetUniformLocation(resource_,name);
 		if(r < 0 && hard)
+		{
+			std::cerr << "failed glGetUniformLocation " << name << std::endl;
 			throw ShaderException();
+		}
 		else
 			return r;
 	}

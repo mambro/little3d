@@ -274,14 +274,16 @@ public:
     bool load(const std::string &path)
     {
         if (!valid())
-            COCO_FATAL() << "Initialize the texture before loading it!";
+        {
+            glGenTextures(1, &resource_);
+        }
 
         COCO_LOG(2) << "Loading texture file " <<  path.c_str();
         unsigned char* img = SOIL_load_image(path.c_str(), &size_.width,
                                              &size_.height, &channels_, 0);
         if (!img)
         {
-            COCO_ERR() << "Failed to load texture image.";
+            COCO_ERR() << "Failed to load texture image\n";
             return false;
         }
         //int img_lenght = size_.width * size_.height * channels_ * sizeof(u_int8_t);

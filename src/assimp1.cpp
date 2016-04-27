@@ -9,13 +9,20 @@
 
 using namespace glpp;
 
+std::string splitpath0(std::string w)
+{
+	return w.substr(0,w.find_last_of("/\\")+1);
+}
+
 const char * meshv = GLSL330(
 	layout(location = 0) in vec4 vertexPosition_modelspace;
 	layout(location = 1) in vec3 vertexNormal_modelspace;
+	layout(location = 2) in vec3 vertexTexCoords;
 	uniform mat4 m_VM;
 	uniform mat4 m_P;
 	uniform mat3 m_N;
 	uniform vec3 l_pos;
+	out vec3 uv;
 	out vec3 DataIn_normal;
 	out vec3 DataIn_lightDir;
 	out vec3 DataIn_eye;
@@ -25,6 +32,7 @@ const char * meshv = GLSL330(
     	DataIn_normal = normalize(m_N * vertexNormal_modelspace);
     	DataIn_lightDir = vec3(l_pos - pos.xyz);
     	DataIn_eye = vec3(-pos);
+    	uv = vertexTexCoords;
 
 	    gl_Position =  m_P*pos;
 	}
@@ -35,11 +43,17 @@ const char * meshf = GLSL330(
 	uniform vec4 diffuse;
 	uniform vec4 ambient;
 	uniform vec4 specular;
+	uniform sampler2D tex;
 	uniform float shininess;
+	in vec3 uv;
 	in vec3 DataIn_normal;
 	in vec3 DataIn_lightDir;
 	in vec3 DataIn_eye;
 
+	vec3 uv2color(vec2 uv)
+	{
+		return vec3(uv.x,uv.y,0.2);
+	}
 
 	void main()
 	{
@@ -55,9 +69,10 @@ const char * meshf = GLSL330(
 			float intSpec = max(dot(h,n), 0.0);
 			spec = specular * pow(intSpec, shininess);
 		}
-
-		color = max(intensity * diffuse + spec, ambient);
-
+		vec4 o = texture(tex,uv.xy);
+		color = max(intensity * o + spec, ambient);
+		color = 0.00001*o+ 0.00001*vec4(uv,1.0) + diffuse;
+		//color = vec4(uv2color(uv),1.0);
 	}
 );
 
@@ -82,7 +97,9 @@ struct material
 		ambient.init(sha,"ambient");
 		specular.init(sha,"specular");
 		shininess.init(sha,"shininess");
+		u_tex.init(sha,"tex");
 
+		u_tex << 0;
 		l_pos << Eigen::Vector3f(0.0,2.0,3.0);
 		diffuse << Eigen::Vector4f(0.0,1.0,0.0,0.5);
 		ambient << Eigen::Vector4f(0.2,0.2,0.2,0.4);
@@ -95,9 +112,19 @@ struct material
 		uVM << x.VM;
 		uP << x.P;
 		uN << x.N;
+		if(tex)
+			tex.bind(GL_TEXTURE_2D,0);
 	}
 
+	void deupdate()
+	{
+		if(!tex)
+			tex.unbind();
+	}
+
+
 	Shader sha;
+	Texture tex;
 
 	WrappedUniform<Eigen::Matrix4f> uVM;
 	WrappedUniform<Eigen::Matrix4f> uP;
@@ -105,6 +132,7 @@ struct material
 	WrappedUniform<Eigen::Vector3f> l_pos;
 	WrappedUniform<Eigen::Vector4f> diffuse,ambient,specular;
 	WrappedUniform<float> shininess;
+	WrappedUniform<int> u_tex;
 };
 
 
@@ -115,6 +143,7 @@ struct basicobj
 		vvbo.init();
 		nvbo.init();
 		tvbo.init();
+		tevbo.init();
 		vao.init();		
 	}
 
@@ -124,8 +153,9 @@ struct basicobj
 		GLScope<VAO> v(vao);
 		GLScope<VBO<1> > t(tvbo,GL_ELEMENT_ARRAY_BUFFER);
 		GLScope<Shader> s(mat->sha);
-		mat->update(mvp);
+		mat->update(mvp);		
     	glDrawElements(GL_TRIANGLES,ntri,GL_UNSIGNED_INT,0); 
+    	mat->deupdate();
 	}
 
 	
@@ -133,13 +163,14 @@ struct basicobj
 	VBO<1> vvbo;
 	VBO<1> nvbo;
 	VBO<1> tvbo;
+	VBO<1> tevbo;
 	VAO    vao;
 	std::shared_ptr<material> mat;
 };
 
 int main(int argc, char **argv)
 {
-	if(argc  < 2)
+	if(argc != 2)
 	{
 		std::cerr << "needed filename of assimp resource\n";
 		return -1;
@@ -153,8 +184,9 @@ int main(int argc, char **argv)
 
 	Assimp::Importer importer;
 	importer.SetPropertyInteger(AI_CONFIG_PP_PTV_NORMALIZE, 1);
+	std::string base = splitpath0(argv[1]);
 	const aiScene* scene = importer.ReadFile( argv[1],aiProcess_Triangulate
-		|aiProcess_GenNormals|aiProcess_PreTransformVertices); 
+		|aiProcess_GenNormals|aiProcess_TransformUVCoords|aiProcess_PreTransformVertices); 
 	    //aiProcess_CalcTangentSpace       | 
 	    //aiProcess_Triangulate            |
 	    //aiProcess_JoinIdenticalVertices  |
@@ -163,6 +195,8 @@ int main(int argc, char **argv)
 	if( !scene)
 		return -1;
 
+	// SEE ALSO: http://www.gamedev.net/topic/666478-texture-mapping-problems-with-assimp/
+
 	std::shared_ptr<material> mat = std::make_shared<material>();
 	std::cout << "only one got:" << scene->mNumMeshes << " meshes" << std::endl;
 	for(int i = 0; i < scene->mNumMeshes; i++)
@@ -170,14 +204,26 @@ int main(int argc, char **argv)
 		aiMesh * m = scene->mMeshes[i];
 		aiMaterial * ma = scene->mMaterials[m->mMaterialIndex];
 		aiString name;
-		//ma->GetTexture(aiTextureType_DIFFUSE,0,&name);
+		ma->GetTexture(aiTextureType_DIFFUSE,0,&name);
 		std::cout << "Properties faces/vertices:" << m->mNumFaces << " " << m->mNumVertices << " uv:" << m->mNumUVComponents[0] << " material:" <<    m->mMaterialIndex << " texture " <<  name.C_Str() << std::endl;
+
 
 		// TODO rescale
 		glERR("opengl:before new");
 		std::unique_ptr<basicobj> op(new basicobj());
 		basicobj & o = *op;
 		o.mat = mat;
+		if(name.length)
+		{
+			std::string tname = name.C_Str();
+			std::replace( tname.begin(), tname.end(), '\\', '/');
+			std::cout << "name is " << tname << " in " << base << std::endl;			
+			mat->tex.load(tname[0] == '/' ? tname : base+tname);
+			if(mat->tex)
+			{
+				std::cout << "texture loaded " << mat->tex.size() << std::endl;
+			}
+		}
 		{
 	std::cout << "vbo... " << std::endl;
 		{
@@ -199,6 +245,17 @@ int main(int argc, char **argv)
 	                    GL_STATIC_DRAW
 	                );
 		}
+    	if(m->HasTextureCoords(0))
+		{
+	std::cout << "tevbo... " << m->mTextureCoords[0] << std::endl;
+			GLScope<VBO<1> > v(o.tevbo);
+			glBufferData(
+	                    GL_ARRAY_BUFFER,
+	                    m->mNumVertices * 3 * sizeof(float),
+	                    (float *)m->mTextureCoords[0],
+	                    GL_STATIC_DRAW
+	                );
+		}
 	std::cout << "vao... " << std::endl;
 			GLScope<VAO > a(o.vao);
 	        glEnableVertexAttribArray(0);
@@ -213,9 +270,16 @@ int main(int argc, char **argv)
 		        glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 				glERR("opengl:vaosetup2");
 	    	}
+	    	if(m->HasTextureCoords(0))
+	    	{
+				GLScope<VBO<1> > v(o.tevbo);
+		        glEnableVertexAttribArray(2);
+		        glVertexAttribPointer (2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+				glERR("opengl:vaosetup3");	    		
+	    	}
 	    }
 		{
-	std::cout << "normals... " << std::endl;
+	std::cout << "vertices... " << std::endl;
 			GLScope<VBO<1> > v(o.vvbo);
 			glBufferData(
 	                    GL_ARRAY_BUFFER,
@@ -261,7 +325,7 @@ int main(int argc, char **argv)
 	std::cout << "go...\n";
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+	glEnable(GL_TEXTURE_2D);
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
