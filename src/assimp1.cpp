@@ -1,6 +1,7 @@
 #include "glpp/app.hpp"
 #include "glpp/draw.hpp"
 #include "glpp/gleigen.hpp"
+#include "glpp/imageproc.hpp"
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
@@ -70,8 +71,10 @@ const char * meshf = GLSL330(
 			spec = specular * pow(intSpec, shininess);
 		}
 		vec4 o = texture(tex,uv.xy);
+		//o += diffuse;
+		//o += vec4(uv,1.0);
 		color = max(intensity * o + spec, ambient);
-		color = 0.00001*o+ 0.00001*vec4(uv,1.0) + diffuse;
+		color = o+ 0.00001*vec4(uv,1.0) + 0.00001*diffuse;
 		//color = vec4(uv2color(uv),1.0);
 	}
 );
@@ -97,29 +100,28 @@ struct material
 		ambient.init(sha,"ambient");
 		specular.init(sha,"specular");
 		shininess.init(sha,"shininess");
-		u_tex.init(sha,"tex");
+		sha.uniform<int>("tex") << 0;
 
-		u_tex << 0;
 		l_pos << Eigen::Vector3f(0.0,2.0,3.0);
-		diffuse << Eigen::Vector4f(0.0,1.0,0.0,0.5);
+		diffuse << Eigen::Vector4f(0.0,1.0,0.0,1.0);
 		ambient << Eigen::Vector4f(0.2,0.2,0.2,0.4);
 		specular << Eigen::Vector4f(0.2,0.2,0.2,0.4);
 		shininess << 10;
 	} 
 
-	void update(matrixsetup & x)
+	void enter(matrixsetup & x)
 	{
+		sha.bind();
 		uVM << x.VM;
 		uP << x.P;
 		uN << x.N;
-		if(tex)
-			tex.bind(GL_TEXTURE_2D,0);
+		tex.bind(GL_TEXTURE_2D,0);
 	}
 
-	void deupdate()
+	void exit()
 	{
-		if(!tex)
-			tex.unbind();
+		tex.unbind();
+		sha.unbind();
 	}
 
 
@@ -132,8 +134,10 @@ struct material
 	WrappedUniform<Eigen::Vector3f> l_pos;
 	WrappedUniform<Eigen::Vector4f> diffuse,ambient,specular;
 	WrappedUniform<float> shininess;
-	WrappedUniform<int> u_tex;
+
 };
+
+
 
 
 struct basicobj
@@ -152,14 +156,13 @@ struct basicobj
 	{
 		GLScope<VAO> v(vao);
 		GLScope<VBO<1> > t(tvbo,GL_ELEMENT_ARRAY_BUFFER);
-		GLScope<Shader> s(mat->sha);
-		mat->update(mvp);		
-    	glDrawElements(GL_TRIANGLES,ntri,GL_UNSIGNED_INT,0); 
-    	mat->deupdate();
+		mat->enter(mvp);		
+    	glDrawElements(GL_TRIANGLES,nindices,GL_UNSIGNED_INT,0); 
+    	mat->exit();
 	}
 
 	
-	int ntri = 0;
+	int nindices = 0;
 	VBO<1> vvbo;
 	VBO<1> nvbo;
 	VBO<1> tvbo;
@@ -225,91 +228,44 @@ int main(int argc, char **argv)
 			}
 		}
 		{
-	std::cout << "vbo... " << std::endl;
-		{
-			GLScope<VBO<1> > v(o.vvbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)&m->mVertices[0],
-	                    GL_STATIC_DRAW
-	                );
-		}
-	std::cout << "nvbo... " << std::endl;
-		{
-			GLScope<VBO<1> > v(o.nvbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)&m->mNormals[0],
-	                    GL_STATIC_DRAW
-	                );
-		}
-    	if(m->HasTextureCoords(0))
-		{
-	std::cout << "tevbo... " << m->mTextureCoords[0] << std::endl;
-			GLScope<VBO<1> > v(o.tevbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)m->mTextureCoords[0],
-	                    GL_STATIC_DRAW
-	                );
-		}
-	std::cout << "vao... " << std::endl;
 			GLScope<VAO > a(o.vao);
-	        glEnableVertexAttribArray(0);
-	        glEnableVertexAttribArray(1);
-	        {
+			{
+				std::cout << "vbo... " << std::endl;
 				GLScope<VBO<1> > v(o.vvbo);
+				glBufferData(GL_ARRAY_BUFFER,m->mNumVertices * 3 * sizeof(float),(float *)&m->mVertices[0],GL_STATIC_DRAW);
+		        glEnableVertexAttribArray(0);
 		        glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-				glERR("opengl:vaosetup1");
-	    	}
-	    	{
+			}
+			if(m->HasNormals())
+			{
+				std::cout << "nbo... " << std::endl;
 				GLScope<VBO<1> > v(o.nvbo);
+				glBufferData(GL_ARRAY_BUFFER,m->mNumVertices * 3 * sizeof(float),(float *)&m->mNormals[0],GL_STATIC_DRAW);
+		        glEnableVertexAttribArray(1);
 		        glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-				glERR("opengl:vaosetup2");
-	    	}
+			}
 	    	if(m->HasTextureCoords(0))
-	    	{
+			{
+				std::cout << "tevbo... " << m->mTextureCoords[0] << std::endl;
 				GLScope<VBO<1> > v(o.tevbo);
-		        glEnableVertexAttribArray(2);
+				glBufferData(GL_ARRAY_BUFFER,m->mNumVertices * 3 * sizeof(float),(float *)m->mTextureCoords[0],GL_STATIC_DRAW);
+			    glEnableVertexAttribArray(2);
 		        glVertexAttribPointer (2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-				glERR("opengl:vaosetup3");	    		
-	    	}
-	    }
+			}
+		}
 		{
-	std::cout << "vertices... " << std::endl;
-			GLScope<VBO<1> > v(o.vvbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)&m->mVertices[0],
-	                    GL_STATIC_DRAW
-	                );
-	std::cout << "vao... " << std::endl;
-			GLScope<VAO > a(o.vao);
-	        glEnableVertexAttribArray(0);
-	        glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-			glERR("opengl:vaosetup");
-	    }	    {
-	std::cout << "tri... " << std::endl;
+			std::cout << "tri... " << std::endl;
 	        std::vector<unsigned int> indices(m->mNumFaces * 3);
 	        for (int i = 0; i < m->mNumFaces; ++ i)
 	        {
 	            aiFace *face = &(m->mFaces[i]);
-	            indices[i * 3]     = face->mIndices[0];
+	            indices[i * 3 + 0] = face->mIndices[0];
 	            indices[i * 3 + 1] = face->mIndices[1];
 	            indices[i * 3 + 2] = face->mIndices[2];
 	        }
 			GLScope<VBO<1> > t(o.tvbo,GL_ELEMENT_ARRAY_BUFFER);
-	        glBufferData(
-	                    GL_ELEMENT_ARRAY_BUFFER,
-	                    m->mNumFaces * 3 * sizeof(unsigned int),
-	                    &indices[0],
-	                    GL_STATIC_DRAW
-	                    );
-	        o.ntri = m->mNumFaces;
+	        glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size() * sizeof(unsigned int),&indices[0],GL_STATIC_DRAW);
+	        o.nindices = indices.size();
 			glERR("opengl:indexsetup");
 		}
 		objects.push_back(std::move(op));
@@ -343,10 +299,11 @@ int main(int argc, char **argv)
 	ms.VM = View*Model;
 	ms.P = Proj;
 	ms.N = ms.VM.block<3,3>(0,0).transpose();
-
+	GLImageProc imgproc;
+	imgproc.init();
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
+		imgproc.runOnScreen(objects[0]->mat->tex);
 		for(auto & o : objects)
 			o->render(ms);
 		glfwSwapBuffers(window);

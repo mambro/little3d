@@ -146,7 +146,7 @@ public:
 
     void renderStep(Texture & input, bool flip)
     {
-        glDepthMask(GL_FALSE);
+        GLScopeDisable<GL_DEPTH_WRITEMASK> xdepth;
         GLScope<Texture> xtex(input);
         GLScope<VAO> xvao(vao_);
         GLScope<Shader> xsha(shader_);
@@ -154,7 +154,6 @@ public:
         //GLScope<VBO<1>> xvbo(tvbo_, GL_ELEMENT_ARRAY_BUFFER);
         //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glDepthMask(GL_TRUE);
     }
 
 private:

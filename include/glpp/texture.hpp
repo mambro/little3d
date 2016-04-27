@@ -273,25 +273,23 @@ public:
     }
     bool load(const std::string &path)
     {
-        if (!valid())
-        {
-            glGenTextures(1, &resource_);
-        }
-
         COCO_LOG(2) << "Loading texture file " <<  path.c_str();
         unsigned char* img = SOIL_load_image(path.c_str(), &size_.width,
                                              &size_.height, &channels_, 0);
+        type_ = GL_UNSIGNED_BYTE;
         if (!img)
         {
             COCO_ERR() << "Failed to load texture image\n";
             return false;
         }
         //int img_lenght = size_.width * size_.height * channels_ * sizeof(u_int8_t);
-        if(channels_ == 4)
-            format_ = GL_RGBA;
-        else if(channels_ == 1)
-            format_ = GL_RED;
-        if(!resource_)
+        switch(channels_)
+        {
+            case 1: format_ = GL_RED; break;
+            case 3: format_ = GL_RGB; break;
+            case 4: format_ = GL_RGBA; break;
+        }
+        if(!resource_)            
             glGenTextures(1, &resource_);
         bind();
         glTexImage2D(GL_TEXTURE_2D, 0, format_, size_.width, size_.height,
