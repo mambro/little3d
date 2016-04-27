@@ -291,10 +291,14 @@ public:
         }
         if(!resource_)            
             glGenTextures(1, &resource_);
-        bind();
+        glBindTexture(GL_TEXTURE_2D, resource_);
         glTexImage2D(GL_TEXTURE_2D, 0, format_, size_.width, size_.height,
                      0, format_, type_, img);
-        unbind();
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
         SOIL_free_image_data(img);
         return true;
     }

@@ -279,9 +279,8 @@ int main(int argc, char **argv)
 		glERR("opengl:setup");
 	}
 	std::cout << "go...\n";
-	glEnable(GL_BLEND);
+	//glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_TEXTURE_2D);
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
@@ -303,7 +302,7 @@ int main(int argc, char **argv)
 	imgproc.init();
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-		imgproc.runOnScreen(objects[0]->mat->tex);
+		//imgproc.runOnScreen(objects[0]->mat->tex);
 		for(auto & o : objects)
 			o->render(ms);
 		glfwSwapBuffers(window);

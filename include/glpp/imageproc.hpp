@@ -34,12 +34,9 @@ public:
         void main() {
             vec2 tt = vec2(texture_coord.x, flip ? 1.0-texture_coord.y : texture_coord.y);
            color = vec4(texture(texture_uniform, tt).rgb,1.0);
-          // color = vec4(texture_coord.xy,0,1.0);
+           //color = vec4(texture_coord.xy,0,1.0);
         }
         );
-
-
-
 
 
         if (vert && frag)
@@ -47,19 +44,20 @@ public:
         else
             shader_.load(vertex_shader_base, fragment_shader_base, "",0,0,false);
 
-        GLint pos_attrib, tex_attrib;
+        //GLint pos_attrib, tex_attrib;
         {
             GLScope<Shader> ss(shader_);
-            pos_attrib = shader_.attributeLocation("position");
-            tex_attrib = shader_.attributeLocation("texcoord");
+            //pos_attrib = shader_.attributeLocation("position");
+            //tex_attrib = shader_.attributeLocation("texcoord");
             flipper_ = shader_.uniformLocation("flip");
             int texture_location = shader_.uniformLocation("texture_uniform");
-            if(texture_location < 0 || tex_attrib < 0 || pos_attrib < 0)
+            if(texture_location < 0/* || tex_attrib < 0 || pos_attrib < 0)*/)
             {
                 COCO_ERR() << "ImageProcessing shader misses: tex uniform,\
                                texcoord or position attributes\n";
             }
-            shader_.uniform<int>(texture_location) << 0;
+            else
+                shader_.uniform<int>(texture_location) << 0;
         }
 
         float wa = 1.0;
@@ -89,10 +87,10 @@ public:
         {
             GLScope<VBO<1>> xvbo(vvbo_, GL_ARRAY_BUFFER);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-            glEnableVertexAttribArray(pos_attrib);
-            glEnableVertexAttribArray(tex_attrib);
-            glVertexAttribPointer(pos_attrib, 2, GL_FLOAT, GL_FALSE,vertex_size, 0);
-            glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE,vertex_size, (void*)texture_offset);
+            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,vertex_size, 0);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,vertex_size, (void*)texture_offset);
         }
         {
             GLScope<VBO<1>> xvbo(tvbo_, GL_ELEMENT_ARRAY_BUFFER);
@@ -136,8 +134,7 @@ public:
 
     Texture & runOnFbo(Texture & input, bool flip = false)
     {
-        GLScope<FBO> xfbo(fbo_);
-        GLViewportScope view(0,0,fbo_.size().width,fbo_.size().height);
+        GLScope<FBO> xfbo(fbo_); // already does viewport
         glClearColor(0,0.0,0.0,0.0);
         glClear(GL_COLOR_BUFFER_BIT);
         renderStep(input,flip);
@@ -151,9 +148,11 @@ public:
         GLScope<VAO> xvao(vao_);
         GLScope<Shader> xsha(shader_);
         shader_.uniform<int>("flip") << (flip ?1:0);
+        glERR("opengl:predraw");
         //GLScope<VBO<1>> xvbo(tvbo_, GL_ELEMENT_ARRAY_BUFFER);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glERR("opengl:postdraw");
     }
 
 private:

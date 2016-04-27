@@ -23,18 +23,17 @@ int main(int argc, char **argv)
 	Texture tex;
 	if(!tex.load(argv[1]))
 		return 0;
+		glERR("opengl:posttexload");
 	img.init();
+		glERR("opengl:GLImageProc init");
 	if(argc > 2)
 		tex.save(argv[2]);
-	std::cout << "loaded " << tex.size() << " " << tex.realsize() << "  " << tex.flipped() << " res:" << (int)tex << std::endl;
+	std::cout << "loaded " << tex.size() << " " << tex.realsize() << " flip:" << tex.flipped() << " res:" << (int)tex << std::endl;
 		glERR("opengl:load");
-
-		glERR("opengl:initimg");
-		img.runOnScreen(tex);
-		glERR("opengl:render");
 
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		glERR("opengl:prerender");
         img.runOnScreen(tex);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
