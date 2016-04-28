@@ -3,11 +3,11 @@ project(ros_minimal)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp)
-
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs genmsg)
+add_definitions(--std=c++11)
 include($ENV{CMAKEGO_PATH}/cmakego.cmake)
-usepackage(glew glfw REQUIRED)
-
+usepackage(glew glfw eigen REQUIRED)
+include_directories($ENV{CMAKEGO_PATH}/../include)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -55,6 +55,7 @@ usepackage(glew glfw REQUIRED)
 #   Service2.srv
 # )
 
+
 ## Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
@@ -67,7 +68,7 @@ usepackage(glew glfw REQUIRED)
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
-
+generate_messages(DEPENDENCIES std_msgs)
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
@@ -111,7 +112,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
-
+include_directories(include ${catkin_INCLUDE_DIRS})
 ## Declare a C++ library
 # add_library(ros_minimal
 #   src/${PROJECT_NAME}/ros_minimal.cpp
@@ -127,10 +128,10 @@ add_executable(ros_minimal_node src/ros_minimal_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(ros_minimal_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(ros_minimal_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(ros_minimal_node
-	p::glew p::glfw
+	p::glew p::glfw p::eigen
    ${catkin_LIBRARIES}
 )
 

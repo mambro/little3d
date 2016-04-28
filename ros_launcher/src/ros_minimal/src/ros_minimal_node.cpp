@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <glew.h>
 #include <GLFW/glfw3.h>
+#include "std_msgs/String.h"
+#include "std_msgs/Empty.h"
 #include "glpp/draw.hpp"
 #include "glpp/gleigen.hpp"
 #include "glpp/imageproc.hpp"
@@ -18,15 +20,17 @@ bool requestPending = false;
 bool visible = true;
 std::string requestImage;
 
-void projectImage(std_msgs::String img)
+bool projectImage(std_msgs::String & req, std_msgs::Empty & res)
 {
 	requestPending = true;
-	requestImage = img;
+	requestImage = req.data;
+	return true;
 }
 
-void switchoff()
+bool switchoff(std_msgs::Empty & req, std_msgs::Empty & res)
 {
 	visible = false;
+	return true;
 }
 
 int main(int argc, char  *argv[])
@@ -35,6 +39,7 @@ int main(int argc, char  *argv[])
 	int width =640;
 	int height=480;
 	const char * title = "hello";
+	const char * mymonitor = "monitor2";
 
 	if(!glfwInit())
 		return -1;
@@ -46,7 +51,7 @@ int main(int argc, char  *argv[])
 
 	glfwWindowHint(GLFW_VISIBLE, visible ? GL_TRUE : GL_FALSE);
 	int n;
-	GLFWmonitor * monitor = glfwGetPrimaryMonitor();
+	GLFWmonitor * monitor = mymonitor != 0 ? 0 : glfwGetPrimaryMonitor();
 	auto monitors = glfwGetMonitors(&n);
 	for(int i = 0; i < n; i++)
 	{
@@ -55,6 +60,13 @@ int main(int argc, char  *argv[])
 			monitor = monitors[i];
 			break;
 		}
+	}
+	if(!monitor)
+	{
+		std::cout << "cannot find monitor\n";
+		for(int i = 0; i < n; i++)
+			std::cout << " " << i << " " << glfwGetMonitorName(monitors[i]) << std::endl;
+		return -1;
 	}
 	GLFWwindow* window = glfwCreateWindow( width, height, title, monitor, NULL);
 
@@ -69,23 +81,27 @@ int main(int argc, char  *argv[])
 	 ros::init(argc, argv, "my_node_name");
 	 ros::NodeHandle nh;
 	 signal(SIGINT, mySigintHandler);
+
 	 ros::ServiceServer service = nh.advertiseService("projectImage", projectImage);
 	 ros::ServiceServer service2 = nh.advertiseService("switchoff", switchoff);
-		GLImageProc img;
-		Texture tex;
+		glpp::GLImageProc img;
+		img.init();
+		// TODO: modify imageproc to support the homography
+		glpp::Texture tex;
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		if(visible)
 			img.runOnScreen(tex);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-		ros::spinOnce();
+		ros::spinOnce(); 
+		// requestPending/visible updated after callback
 		if(requestPending)
 		{
 			// load image
-			if(tex.load(requestImage.c_str())
+			if(!tex.load(requestImage.c_str()))
 			{
-
+				// ERROR message 
 			}
 			requestPending = false;
 		}
