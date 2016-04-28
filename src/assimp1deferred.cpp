@@ -1,6 +1,7 @@
 // See: http://aras-p.info/texts/CompactNormalStorage.html#method00xyz
 // http://learnopengl.com/#!Advanced-Lighting/Deferred-Shading
 // http://www.ogldev.org/www/tutorial36/tutorial36.html
+// http://gamedevs.org/uploads/deferred-shading-tutorial.pdf
 #include "glpp/app.hpp"
 #include "glpp/draw.hpp"
 #include "glpp/gleigen.hpp"
