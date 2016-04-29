@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 
 namespace glpp
 {
@@ -63,11 +64,12 @@ public:
         float wa = 1.0;
         float ha = 1.0;
         float vertices[] = {
-        -1.0f,  1.0f, 0.0f, ha, // Left Top 
-         -1.0f, -1.0f, 0,1.0f-ha, // Left Bottom
-         1.0f, 1.0f, wa,   ha, // Right Top
-        1.0f, -1.0f, wa,1.0f-ha,  // Bottom-left
+        -1.0f,  1.0f,    0.0f, ha, // Left Top 
+         -1.0f, -1.0f,   0,1.0f-ha, // Left Bottom
+         1.0f, 1.0f,     wa,   ha, // Right Top
+        1.0f, -1.0f,     wa,1.0f-ha,  // Right Bottom
         };
+        std::copy(vertices,vertices+16,all_.begin());
 
 /*
     -1.0f,  1.0f,
@@ -96,6 +98,18 @@ public:
             GLScope<VBO<1>> xvbo(tvbo_, GL_ELEMENT_ARRAY_BUFFER);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
         }
+    }
+
+    /// set vertices in clip space 2D: LT LB RT RB
+    void setVerticesClipSpace(const std::array<float,4*2> &vertices)
+    {
+        for(int i = 0; i < 4; i++)
+        {
+            all_[i*4] = vertices[i*2];
+            all_[i*4+1] = vertices[i*2+1];
+        }
+        GLScope<VBO<1>> xvbo(vvbo_, GL_ARRAY_BUFFER);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(float)*all_.size(), all_.data(), GL_STATIC_DRAW);
     }
 
     void initFBO(int width, int height, bool input_reduced, bool output_reduced)
@@ -156,6 +170,7 @@ public:
     }
 
 private:
+    std::array<float,4*4> all_;
     GLint flipper_;
     FBO fbo_; /// support FBO
     Shader shader_; /// support Shader object

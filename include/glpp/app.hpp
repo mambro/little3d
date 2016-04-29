@@ -10,6 +10,8 @@
 
 namespace glpp
 {
+	// TODO: add glfwSetWindowUserPointer 
+
 	struct XGLFWwindow
 	{
 		GLFWwindow * window = 0;

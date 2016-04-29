@@ -9,6 +9,16 @@ using namespace glpp;
 #define COCO_ERR() std::cout
 float angle = 0;
 
+bool swap = false;
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_E && action == GLFW_PRESS)
+    {
+    	swap = true;
+    }
+}
+
 int main(int argc, char **argv)
 {
 	if(argc < 2)
@@ -31,9 +41,20 @@ int main(int argc, char **argv)
 	std::cout << "loaded " << tex.size() << " " << tex.realsize() << " flip:" << tex.flipped() << " res:" << (int)tex << std::endl;
 		glERR("opengl:load");
 
+	// TODO: make it lambda function
+	glfwSetKeyCallback(window, key_callback);
+
+
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		glERR("opengl:prerender");
+		if(swap)
+		{
+			// LT LB RT RB
+			std::array<float,8> full({-0.5,1.0,   -0.5,-1.0,  0.5,1.0,   0.5,-1.0 });
+	        img.setVerticesClipSpace(full);
+	        swap = false;
+		}
         img.runOnScreen(tex);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
