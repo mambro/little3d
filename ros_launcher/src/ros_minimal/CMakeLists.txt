@@ -3,10 +3,11 @@ project(ros_minimal)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs genmsg)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs message_generation)
 add_definitions(--std=c++11)
 include($ENV{CMAKEGO_PATH}/cmakego.cmake)
 usepackage(glew glfw eigen REQUIRED)
+
 include_directories($ENV{CMAKEGO_PATH}/../include)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -49,11 +50,11 @@ include_directories($ENV{CMAKEGO_PATH}/../include)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ add_service_files(
+   FILES
+   projectImageSrv.srv
+   switchoffSrv.srv 
+)
 
 
 ## Generate actions in the 'action' folder
@@ -64,11 +65,11 @@ include_directories($ENV{CMAKEGO_PATH}/../include)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
-generate_messages(DEPENDENCIES std_msgs)
+generate_messages(
+   DEPENDENCIES
+   std_msgs  # Or other packages containing msgs
+)
+##generate_messages(DEPENDENCIES std_msgs)
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
@@ -98,12 +99,11 @@ generate_messages(DEPENDENCIES std_msgs)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
+catkin_package( CATKIN_DEPENDS roscpp std_msgs message_generation   )
 #  INCLUDE_DIRS include
 #  LIBRARIES ros_minimal
 #  CATKIN_DEPENDS other_catkin_pkg
 
-)
 
 ###########
 ## Build ##
@@ -118,6 +118,11 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 #   src/${PROJECT_NAME}/ros_minimal.cpp
 # )
 
+##Include folder with ros service headers created with generate_messages
+include_directories($ENV{CMAKEGO_PATH}/../ros_launcher/src/ros_minimal/build/devel/include/ros_minimal)
+
+## First build the full libraries.
+link_directories($ENV{CMAKEGO_PATH}/../build/include/SOIL/)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -130,8 +135,10 @@ add_executable(ros_minimal_node src/ros_minimal_node.cpp)
 ## same as for the library above
 add_dependencies(ros_minimal_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
+
+
 target_link_libraries(ros_minimal_node
-	p::glew p::glfw p::eigen
+	p::glew p::glfw p::eigen SOIL
    ${catkin_LIBRARIES}
 )
 

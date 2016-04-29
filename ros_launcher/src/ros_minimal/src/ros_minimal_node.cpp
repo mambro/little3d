@@ -1,11 +1,15 @@
-#include <ros/ros.h>
+#include <signal.h>
+
 #include <glew.h>
 #include <GLFW/glfw3.h>
-#include "std_msgs/String.h"
-#include "std_msgs/Empty.h"
 #include "glpp/draw.hpp"
 #include "glpp/gleigen.hpp"
 #include "glpp/imageproc.hpp"
+
+#include <ros/ros.h>
+#include "ros_minimal/projectImageSrv.h"
+#include "ros_minimal/switchoffSrv.h"
+
 
 void mySigintHandler(int sig)
 {
@@ -16,18 +20,19 @@ void mySigintHandler(int sig)
   ros::shutdown();
 }
 
+
 bool requestPending = false;
 bool visible = true;
 std::string requestImage;
 
-bool projectImage(std_msgs::String & req, std_msgs::Empty & res)
+bool projectImage(ros_minimal::projectImageSrv::Request & req, ros_minimal::projectImageSrv::Response & res)
 {
 	requestPending = true;
 	requestImage = req.data;
 	return true;
 }
 
-bool switchoff(std_msgs::Empty & req, std_msgs::Empty & res)
+bool switchoff(ros_minimal::switchoffSrv::Request & req, ros_minimal::switchoffSrv::Response & res)
 {
 	visible = false;
 	return true;
@@ -36,10 +41,10 @@ bool switchoff(std_msgs::Empty & req, std_msgs::Empty & res)
 int main(int argc, char  *argv[])
 {
 	bool visible = true;
-	int width =640;
-	int height=480;
+	int width = 1280;
+	int height = 800;
 	const char * title = "hello";
-	const char * mymonitor = "monitor2";
+	const char * mymonitor = "HDMI-0";
 
 	if(!glfwInit())
 		return -1;
@@ -78,17 +83,18 @@ int main(int argc, char  *argv[])
 		return 0;
 
 	glClearColor(0.0,0.0,0.0,1.0);
-	 ros::init(argc, argv, "my_node_name");
-	 ros::NodeHandle nh;
-	 signal(SIGINT, mySigintHandler);
+	ros::init(argc, argv, "ros_minimal_node");
+	ros::NodeHandle nh;
+	signal(SIGINT, mySigintHandler);
 
-	 ros::ServiceServer service = nh.advertiseService("projectImage", projectImage);
-	 ros::ServiceServer service2 = nh.advertiseService("switchoff", switchoff);
-		glpp::GLImageProc img;
-		img.init();
+	ros::ServiceServer service = nh.advertiseService("projectImage", & projectImage);
+	ros::ServiceServer service2 = nh.advertiseService("switchoff", & switchoff);
+	glpp::GLImageProc img;
+	img.init();
 		// TODO: modify imageproc to support the homography
-		glpp::Texture tex;
-	do {
+	glpp::Texture tex;
+	do 
+	{
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 		if(visible)
 			img.runOnScreen(tex);
