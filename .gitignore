@@ -1,0 +1,4 @@
+# Ignore every single build subfolder
+**/build/*
+**~
+*~ 

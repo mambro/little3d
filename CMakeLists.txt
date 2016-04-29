@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
+SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmakego)
 include(cmakego)
 option(USE_EGL "Use OpenGL ES instead of OpenGL 3.3")
 #option(UTHREE "Build micro THREE")
