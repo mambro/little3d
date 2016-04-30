@@ -35,3 +35,8 @@ if(TARGET p::egl)
 add_executable(X11less X11less.cpp)
 target_link_libraries(X11less EGL)
 endif()
+
+if(TARGET p::gstreamer)
+add_executable(video1 video1.cpp)
+target_link_libraries(video1 p::gstreamer)
+endif()
