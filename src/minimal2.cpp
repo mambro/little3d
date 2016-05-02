@@ -2,6 +2,8 @@
 
 int main(int argc, char const *argv[])
 {
+	// Reduced code lines number to inizialize a GLFW window with glpp. 
+	// This is the same program of minimal.cpp	
 	GLFWwindow*  window = glpp::init(640,480,"Hello");
 	if(!window)
 		return 0;

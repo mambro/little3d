@@ -42,13 +42,36 @@ int main(int argc, char **argv)
 		glERR("opengl:after init");
 
 
+	/*Set up a perspective projection matrix
+	Like the deprecated gluPerspective function
+	*/
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
-	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
+	auto Proj = glpp::eigen::perspective<float>(60.0f,  // The horizontal Field of View, in degrees : the amount of "zoom". 
+														//Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
 	    0.1f,        // Near clipping plane. Keep as big as possible, or you'll get precision issues.
 	    300.0f       // Far clipping plane. Keep as little as possible.
 	);
+
+
+	/*Depth buffer precision is affected by the values specified for zNear and zFar.
+	The greater the ratio of zFar to zNear is,the less effective the depth buffer will be at distinguishing between
+	surfaces that are near each other.	If   r= zFar / zNear, we have roughly that log2(r) bits of depth
+	buffer precision are lost. */
+
+	/*  LOOKAT
+	To place the virtual camera to capture the view.
+	Syntax like the deprecated gluLookAt()
+	1) The point EYE (ex, ey, ez) defines the location of the camera.
+	2) The vector AT (ax, ay, az) denotes the direction where the camera is aiming at, 
+		usually at the center of the world or an object.
+	3) The vector UP (ux, uy, uz) denotes the upward orientation of the camera roughly. 
+	   UP is typically coincided with the y-axis of the world space. UP is roughly orthogonal to AT, but not necessary.
+	   As UP and AT define a plane, we can construct an orthogonal vector to AT in the camera space.
+	*/
+
 	auto View      = glpp::eigen::lookAt<float>({0,2,20},{0,0,0},{0,1,0});
+
 	Eigen::Matrix4f Model = Eigen::Matrix4f::Identity();
 	Model.block<3,3>(0,0) = 10*Eigen::Matrix3f::Identity();
 	std::cout << "Proj is\n" << Proj  << std::endl;
