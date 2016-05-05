@@ -47,6 +47,7 @@ namespace glpp
 		}
 
 		glfwMakeContextCurrent(window);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 #ifndef USE_EGL
 		glewExperimental = true; // Needed for core profile
