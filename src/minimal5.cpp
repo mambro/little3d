@@ -51,7 +51,15 @@ int main(int argc, char **argv)
 		if(swap)
 		{
 			// LT LB RT RB
-			std::array<float,8> full({-0.5,1.0,   -0.5,-1.0,  0.5,1.0,   0.5,-1.0 });
+			std::array<float,8> full({-0.516531,
+										0.133457,
+										0.726285,
+										0.155106,
+										0.740697,
+	                                    -0.821361,
+                                      -0.511139
+                                       -0.847909 });		      
+			//std::array<float,8> full({-0.5,1.0,   -0.5,-1.0,  0.5,1.0,   0.5,-1.0 });
 	        img.setVerticesClipSpace(full);
 	        swap = false;
 		}
