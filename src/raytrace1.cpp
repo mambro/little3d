@@ -11,6 +11,12 @@ struct tbox
 	float vmax[3];
 };
 
+struct tsphere
+{
+	float center[3];
+	float radius;
+};
+
 const float SQUARE[] = {
     -1.0f,  1.0f,
     -1.0f, -1.0f,
@@ -27,29 +33,49 @@ const char * meshv = GLSL330(
 	}
 );
 
-// original raytracing shader from 
 const char * meshf = GLSL330(
+
 	struct box
 	{
 		vec3 min;
 		vec3 max;
 	};
 
+	struct sphere
+	{
+		vec3 center;
+		float radius;
+	};
+
+	struct intersectout
+	{
+		float lambda;
+		vec3 point;
+		vec3 normal;
+	};
+
+	uniform vec3      cameraCenter;
 	uniform box       box1;
 	uniform vec3      iResolution;           // viewport resolution (in pixels)
 	uniform float     iGlobalTime;           // shader playback time (in seconds)
+	uniform sphere sphere1;
 	out vec4 xgl_FragColor;
 
-
-	float sphere(vec3 ray, vec3 dir, vec3 center, float radius)
+	/// returns normal and lambda of point
+	intersectout intersectSphere(vec3 ray, vec3 dir, vec3 center, float radius)
 	{
-	 vec3 rc = ray-center;
-	 float c = dot(rc, rc) - (radius*radius);
-	 float b = dot(dir, rc);
-	 float d = b*b - c;
-	 float t = -b - sqrt(abs(d));
-	 float st = step(0.0, min(t,d));
-	 return mix(-1.0, t, st);
+		vec3 rc = ray-center;
+		float c = dot(rc, rc) - (radius*radius);
+		float b = dot(dir, rc);
+		float d = b*b - c;
+		float t = -b - sqrt(abs(d));
+		float st = step(0.0, min(t,d));
+		float outt = mix(-1.0, t, st);
+		intersectout xout;
+		xout.lambda = outt;
+		xout.point = (ray+dir*outt);
+		xout.normal = normalize(center - xout.point); 
+		return xout;
 	}
 
 	// complex background
@@ -92,21 +118,22 @@ const char * meshf = GLSL330(
 
 	void main(void)
 	{
-		// this could be done differently
-	 vec2 uv = (-1.0 + 2.0*gl_FragCoord.xy / iResolution.xy) * 
-	  vec2(iResolution.x/iResolution.y, 1.0);
-	 vec3 ro = vec3(0.0, 0.0, -3.0);
-	 vec3 rd = normalize(vec3(uv, 1.0));
-	 vec3 p = vec3(0.0, 0.0, 0.0);
+	// fragment to UV
+	 vec2 uv = (-1.0 + 2.0*gl_FragCoord.xy / iResolution.xy) * vec2(iResolution.x/iResolution.y, 1.0);
 
-	 //float tb = intersectBox(ro,rd,box1);
-	 
-	 float t = sphere(ro, rd, p, 1.0);
-	 vec3 nml = normalize(p - (ro+rd*t));
+	 // TODO full projective camera
+	 vec3 ro = cameraCenter;
+	 vec3 rd = normalize(vec3(uv, 1.0));
+
+	 // TODO box and multiple spheres
+	 // TODO multiple passes for reflections
+	 intersectout rs = intersectSphere(ro, rd, sphere1.center, sphere1.radius);
 	 vec3 bgCol = background(iGlobalTime, rd);
-	 rd = reflect(rd, nml);
+	 rd = reflect(rd, rs.normal);
+
+	 // TODO flexible background
 	 vec3 col = background(iGlobalTime, rd) * vec3(0.9, 0.8, 1.0); // reflected ray
-	 xgl_FragColor = vec4( mix(bgCol, col, step(0.0, t)), 1.0 );   
+	 xgl_FragColor = vec4( mix(bgCol, col, step(0.0, rs.lambda)), 1.0 );   
 	}
 
 );
@@ -147,11 +174,19 @@ int main(int argc, char **argv)
 	std::cout << "shader is " << sha << std::endl;
 	int uResolution = glGetUniformLocation(sha, "iResolution");
 	int uTime = glGetUniformLocation(sha, "iGlobalTime");
+	int uCameraCenter = glGetUniformLocation(sha,"cameraCenter");
+	int uSphere1c = glGetUniformLocation(sha,"sphere1.center");
+	int uSphere1r = glGetUniformLocation(sha,"sphere1.radius");
+	tsphere xsphere1 = {{0,0,0},1.0};
 	float xtime = 0;
+	float xCameraCenter[] = {0.0f,0.0f,-3.0f};
 	float xResolution[] = {(float)width,(float)height,0.0f};
 	{
 		GLScope<Shader> sh(sha);		
 		glUniform3fv(uResolution,1,xResolution);
+		glUniform3fv(uCameraCenter,1,xCameraCenter);
+		glUniform3fv(uSphere1c,1,xsphere1.center);
+		glUniform1f(uSphere1r,xsphere1.radius);
 	}
 
 	do {
