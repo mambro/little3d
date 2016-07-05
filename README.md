@@ -25,3 +25,17 @@ https://devblogs.nvidia.com/parallelforall/egl-eye-opengl-visualization-without-
 
 SEE: http://www.x.org/wiki/Events/XDC2014/XDC2014RitgerEGLNonMesa/nvidia-and-compositors.pdf
 SEE: https://github.com/parallel-forall/code-samples/tree/master/posts/egl_OpenGl_without_Xserver
+
+
+References
+----------
+https://open.gl/framebuffers
+
+RayTracing
+---------
+Minimal example in raytrace1.cpp
+Check serious stuff: https://github.com/lighttransport/mallie
+
+Other Libraries
+--------
+Cinder https://github.com/cinder/Cinder

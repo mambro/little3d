@@ -238,9 +238,9 @@ struct AlphaOIT
 		{
 			// only GLES3+ GL3.3+
 			FBO::Setup s(fbo);
-			fbo.attach(trgb1,0);
-			fbo.attach(trgb2,1);
-			fbo.makedepth();
+			s.attach(trgb1,0);
+			s.attach(trgb2,1);
+			s.makedepth();
 		}
 
 		{

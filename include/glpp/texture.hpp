@@ -257,19 +257,21 @@ public:
     void initdepth(GLSize size, bool usefloat = true)
     {
         release();
+        glERR("preinitdepth");
         format_ = GL_DEPTH_COMPONENT;
         channels_ = 1;
         type_ = usefloat ? GL_FLOAT: GL_UNSIGNED_SHORT;
         size_ = size;
         glGenTextures(1, &resource_);
         glBindTexture(GL_TEXTURE_2D, resource_);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, size_.width, size_.height,
+        glTexImage2D(GL_TEXTURE_2D, 0, usefloat ? GL_DEPTH_COMPONENT24 : GL_DEPTH_COMPONENT16, size_.width, size_.height,
                          0, GL_DEPTH_COMPONENT, type_, NULL);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D,0);
+        glERR("initdepth");
     }
     bool load(const std::string &path)
     {
@@ -491,7 +493,7 @@ public:
 class ColorTexture: public Texture
 {
 public:
-    void init(GLSize size, bool alpha) { Texture::initcolor(size,alpha ? GL_RGBA: GL_RGB,GL_UNSIGNED_BYTE); }
+    void init(GLSize size, bool alpha) { Texture::initcolor(size,alpha ? GL_RGBA: GL_RGB,alpha ? GL_RGBA: GL_RGB,GL_UNSIGNED_BYTE); }
 };
 
 /// Texture sampler overrides Texture parameters attached to the same Texture unit

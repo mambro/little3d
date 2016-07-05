@@ -251,10 +251,10 @@ struct Deferred
 		{
 			// only GLES3+ GL3.3+
 			FBO::Setup s(fbo);
-			fbo.attach(trgb);
-			fbo.makedepth();
-			fbo.attach(tnormal,1);
-			fbo.attach(tpos,2);
+			s.attach(trgb);
+			s.makedepth();
+			s.attach(tnormal,1);
+			s.attach(tpos,2);
 		}
 
 		{
@@ -474,6 +474,10 @@ int main(int argc, char **argv)
 	} 
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
 	glfwTerminate();
+
+	/*
+	TODO: save pos and normal FLOAT to proper output format
+	*/
 
 	// DATA available in fbo
 	// extract texture

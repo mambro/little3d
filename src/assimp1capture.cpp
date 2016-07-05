@@ -151,14 +151,14 @@ int main(int argc, char **argv)
 	ColorTexture trgb;
 	DepthTexture tdepth;
 	trgb.init(GLSize(width,height),true); 
-	tdepth.init(GLSize(width,height),false); // 16bit
+	tdepth.init(GLSize(width,height),false); // float
 
 	FBO fbo;
 	{
 		FBO::Setup s(fbo);
-		fbo.attach(trgb);
-		fbo.attach(tdepth);
-		// and then verifies
+		s.attach(trgb);
+		s.attach(tdepth);
+		// optional: call glDrawBuffers pointing to GL_COLOR_ATTACHMENT0
 	}
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
