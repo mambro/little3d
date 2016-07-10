@@ -30,7 +30,7 @@ SEE: https://github.com/parallel-forall/code-samples/tree/master/posts/egl_OpenG
 References
 ----------
 https://open.gl/framebuffers
-
+http://learnopengl.com/#!Advanced-Lighting/Shadows/Shadow-Mapping
 RayTracing
 ---------
 Minimal example in raytrace1.cpp

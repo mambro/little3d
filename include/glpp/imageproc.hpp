@@ -123,11 +123,9 @@ public:
         else
             texture_.initcolor(GLSize(width, height));
 
-        fbo_.init();
         {
-            GLScope<FBO> xfbo(fbo_);
-            fbo_.attachcolor(texture_);
-            checkFramebufferStatus(fbo_.validate());
+            FBO::Setup s(fbo_);
+            s.attachcolor(texture_);
         }
     }
 

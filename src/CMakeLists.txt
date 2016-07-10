@@ -42,3 +42,5 @@ if(TARGET p::gstreamer)
 add_executable(video1 video1.cpp)
 target_link_libraries(video1 p::gstreamer)
 endif()
+
+add_executable(testarcamera testarcamera.cpp)
