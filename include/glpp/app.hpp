@@ -19,6 +19,7 @@ namespace glpp
 	{
 		GLFWwindow * window = 0;
 		int innerWidth,innerHeight;
+		int realWidth,realHeight;
 		float devicePixelRatio;
 		float innerRatio;
 		float ppmm; // pixerl per millimeter
@@ -89,6 +90,9 @@ namespace glpp
 			return std::shared_ptr<T>(0);
 		}
 #endif
+		int q[4];
+		glGetIntegerv(GL_VIEWPORT,q);
+
 		//glERR("glew:init");
 
 		// Ensure we can capture the escape key being pressed below
@@ -109,6 +113,8 @@ namespace glpp
 		r.innerWidth = width;
 		r.innerHeight = height;
 		r.innerRatio = width/(float)height;
+		r.realWidth = q[2];
+		r.realHeight = q[3];
 
 		int widthMM, heightMM;
 		if(monitor)
@@ -125,6 +131,10 @@ namespace glpp
 		std::shared_ptr<T> rr = std::make_shared<T>(r);
 		glfwSetWindowUserPointer(window,rr.get());
 		rr->bind();// link
+
+		//glEnable(GL_BLEND);
+		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
 		//r.devicePixelRatio = 0;
 		return rr;

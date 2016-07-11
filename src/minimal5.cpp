@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 		glERR("opengl:load");
 
 	// TODO: make it lambda function
-	glfwSetKeyCallback(window, key_callback);
+	glfwSetKeyCallback(*window, key_callback);
 
 
 	do {
@@ -56,9 +56,9 @@ int main(int argc, char **argv)
 	        swap = false;
 		}
         img.runOnScreen(tex);
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(*window);
 		glfwPollEvents();
 	} 
-	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
+	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	glfwTerminate();
 }

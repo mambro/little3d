@@ -10,55 +10,81 @@
 #include <assimp/postprocess.h>     // Post processing flags
 #include <Eigen/Geometry>
 #include <iostream>
+#include "assimpex.hpp"
+#include "glpp/ArcBall.hpp"
 
 using namespace glpp;
 
-const char * meshv = GLSL330(
-	layout (location = 0) in vec3 position;
-	layout (location = 1) in vec3 normal;
+	const char * meshv = GLSL330(
+		layout(location = 0) in vec3 vertexPosition_modelspace;
+		layout(location = 1) in vec3 vertexNormal_modelspace;
+		layout(location = 2) in vec3 vertexTexCoords;
+		uniform mat4 m_VM;
+		uniform mat4 m_M;
+		uniform mat4 m_P;
+		uniform mat3 m_N;
+		uniform vec3 l_pos;
+		out vec3 uv;
+		out vec3 DataIn_normal;
+		out vec3 DataIn_lightDir;
+		out vec3 DataIn_eye;
+		out vec3 FragPos;
 
-	out vec3 FragPos;
-	out vec3 Normal;
+		void main(){
+			vec4 worldPos = m_M * vec4(vertexPosition_modelspace, 1.0f);
+	    	FragPos = worldPos.xyz; 
 
-	uniform mat4 m_M;
-	uniform mat3 m_N;
-	uniform mat4 m_V;
-	uniform mat4 m_P;
+			vec4 pos = m_VM *  vec4(vertexPosition_modelspace, 1.0f);
+	    	DataIn_normal = normalize(m_N * vertexNormal_modelspace);
+	    	DataIn_lightDir = vec3(l_pos - pos.xyz);
+	    	DataIn_eye = vec3(-pos);
+	    	uv = vertexTexCoords;
 
-	void main()
-	{
-	    vec4 worldPos = m_M * vec4(position, 1.0f);
-	    FragPos = worldPos.xyz; 
-	    gl_Position = (m_P*m_V) * worldPos; // PVM
-	    Normal = m_N * normal;
-	}
-
-);
+		    gl_Position =  m_P*pos;
+		}
+	);
 
 const char * meshf = GLSL330(
 	layout (location = 0) out vec4 gAlbedoSpec;
 	layout (location = 1) out vec3 gNormal;
 	layout (location = 2) out vec3 gPosition;
 
-	in vec2 TexCoords;
+		uniform vec4 diffuse;
+		uniform vec4 ambient;
+		uniform vec4 specular;
+		uniform sampler2D tex;
+		uniform float shininess;
+
+	in vec3 uv;
+	in vec3 DataIn_normal;
+	in vec3 DataIn_lightDir;
+	in vec3 DataIn_eye;
 	in vec3 FragPos;
-	in vec3 Normal;
 
 	//uniform sampler2D texture_diffuse1;
 	//uniform sampler2D texture_specular1;
 
 	void main()
 	{    
+		vec4 spec = vec4(0.0);
+
+		vec3 n = normalize(DataIn_normal);
+		vec4 o = texture(tex,uv.xy);
+		//o += diffuse;
+		//o += vec4(uv,1.0);
+		//color = max(intensity * o + spec, ambient);
+		//color = o+ 0.00001*vec4(uv,1.0) + 0.00001*diffuse;
+
 	    // Store the fragment position vector in the first gbuffer texture
 	    gPosition = FragPos;
 	    // Also store the per-fragment normals into the gbuffer
-	    gNormal = normalize(Normal);
+	    gNormal = normalize(DataIn_normal);
 	    // And the diffuse per-fragment color
 	    //gAlbedoSpec.rgb = texture(texture_diffuse1, TexCoords).rgb;
 	    // Store specular intensity in gAlbedoSpec's alpha component
 	    //gAlbedoSpec.a = texture(texture_specular1, TexCoords).r;
 
-	    gAlbedoSpec = vec4(1.0,0.0,0.0,0.3);
+	    gAlbedoSpec = o;
 	}
 
 );
@@ -153,83 +179,6 @@ void main()
 
 
 
-struct matrixsetup
-{
-	Eigen::Matrix4f V;
-	Eigen::Matrix4f M;
-	Eigen::Matrix4f P;
-	Eigen::Matrix3f N;
-};
-
-struct material
-{
-	void initshader()
-	{
-		uV.init(sha,"m_V");
-		uM.init(sha,"m_M");
-		uP.init(sha,"m_P");
-		uN.init(sha,"m_N");
-		//l_pos.init(sha,"l_pos");
-		//diffuse.init(sha,"diffuse");
-		//ambient.init(sha,"ambient");
-		//specular.init(sha,"specular");
-		//shininess.init(sha,"shininess");
-
-		l_pos << Eigen::Vector3f(0.0,2.0,3.0);
-		diffuse << Eigen::Vector4f(0.0,1.0,0.0,0.5);
-		ambient << Eigen::Vector4f(0.2,0.2,0.2,0.4);
-		specular << Eigen::Vector4f(0.2,0.2,0.2,0.4);
-		shininess << 10;
-	} 
-
-	void update(matrixsetup & x)
-	{
-		uM << x.M;
-		uV << x.V;
-		uP << x.P;
-		uN << x.N;
-	}
-
-	Shader sha;
-
-	WrappedUniform<Eigen::Matrix4f> uM;
-	WrappedUniform<Eigen::Matrix4f> uV;
-	WrappedUniform<Eigen::Matrix4f> uP;
-	WrappedUniform<Eigen::Matrix3f> uN;
-	WrappedUniform<Eigen::Vector3f> l_pos; // light position
-	WrappedUniform<Eigen::Vector4f> diffuse,ambient,specular;
-	WrappedUniform<float> shininess;
-};
-
-
-struct basicobj
-{
-	basicobj()
-	{
-		vvbo.init();
-		nvbo.init();
-		tvbo.init();
-		vao.init();		
-	}
-
-
-	void render(matrixsetup & mvp)
-	{
-		GLScope<VAO> v(vao);
-		GLScope<VBO<1> > t(tvbo,GL_ELEMENT_ARRAY_BUFFER);
-		GLScope<Shader> s(mat->sha);
-		mat->update(mvp);
-    	glDrawElements(GL_TRIANGLES,ntri,GL_UNSIGNED_INT,0); 
-	}
-
-	
-	int ntri = 0;
-	VBO<1> vvbo;
-	VBO<1> nvbo;
-	VBO<1> tvbo;
-	VAO    vao;
-	std::shared_ptr<material> mat;
-};
 
 struct Deferred
 {
@@ -318,112 +267,16 @@ int main(int argc, char **argv)
 	int width = 640;
 	int height = 480;
 	auto window = glpp::init(width,height,"hello deferred");
+	std::cout << "asked " << width << " " << height << " real " << window->realWidth<< " " << window->realHeight << std::endl;
 		glERR("opengl:after init");
-	Deferred def(width,height);
+	Deferred def(window->realWidth,window->realHeight);
 		glERR("opengl:after deferred");
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
-
-	Assimp::Importer importer;
-	importer.SetPropertyInteger(AI_CONFIG_PP_PTV_NORMALIZE, 1);
-	const aiScene* scene = importer.ReadFile( argv[1],aiProcess_Triangulate
-		|aiProcess_GenNormals|aiProcess_PreTransformVertices); 
-	    //aiProcess_CalcTangentSpace       | 
-	    //aiProcess_Triangulate            |
-	    //aiProcess_JoinIdenticalVertices  |
-	    //aiProcess_SortByPType);
-	// If the import failed, report it
-	if( !scene)
-		return -1;
-
 	std::shared_ptr<material> mat = std::make_shared<material>();
-	std::cout << "only one got:" << scene->mNumMeshes << " meshes" << std::endl;
-	for(int i = 0; i < scene->mNumMeshes; i++)
-	{
-		aiMesh * m = scene->mMeshes[i];
-		aiMaterial * ma = scene->mMaterials[m->mMaterialIndex];
-		aiString name;
-		//ma->GetTexture(aiTextureType_DIFFUSE,0,&name);
-		std::cout << "Properties faces/vertices:" << m->mNumFaces << " " << m->mNumVertices << " uv:" << m->mNumUVComponents[0] << " material:" <<    m->mMaterialIndex << " texture " <<  name.C_Str() << std::endl;
+	assimploader(argv[1],objects,mat);
 
-		// TODO rescale
-		glERR("opengl:before new");
-		std::unique_ptr<basicobj> op(new basicobj());
-		basicobj & o = *op;
-		o.mat = mat;
-		{
-	std::cout << "vbo... " << std::endl;
-		{
-			GLScope<VBO<1> > v(o.vvbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)&m->mVertices[0],
-	                    GL_STATIC_DRAW
-	                );
-		}
-	std::cout << "nvbo... " << std::endl;
-		{
-			GLScope<VBO<1> > v(o.nvbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)&m->mNormals[0],
-	                    GL_STATIC_DRAW
-	                );
-		}
-	std::cout << "vao... " << std::endl;
-			GLScope<VAO > a(o.vao);
-	        glEnableVertexAttribArray(0);
-	        glEnableVertexAttribArray(1);
-	        {
-				GLScope<VBO<1> > v(o.vvbo);
-		        glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-				glERR("opengl:vaosetup1");
-	    	}
-	    	{
-				GLScope<VBO<1> > v(o.nvbo);
-		        glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-				glERR("opengl:vaosetup2");
-	    	}
-	    }
-		{
-	std::cout << "normals... " << std::endl;
-			GLScope<VBO<1> > v(o.vvbo);
-			glBufferData(
-	                    GL_ARRAY_BUFFER,
-	                    m->mNumVertices * 3 * sizeof(float),
-	                    (float *)&m->mVertices[0],
-	                    GL_STATIC_DRAW
-	                );
-	std::cout << "vao... " << std::endl;
-			GLScope<VAO > a(o.vao);
-	        glEnableVertexAttribArray(0);
-	        glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-			glERR("opengl:vaosetup");
-	    }	    {
-	std::cout << "tri... " << std::endl;
-	        std::vector<unsigned int> indices(m->mNumFaces * 3);
-	        for (int i = 0; i < m->mNumFaces; ++ i)
-	        {
-	            aiFace *face = &(m->mFaces[i]);
-	            indices[i * 3]     = face->mIndices[0];
-	            indices[i * 3 + 1] = face->mIndices[1];
-	            indices[i * 3 + 2] = face->mIndices[2];
-	        }
-			GLScope<VBO<1> > t(o.tvbo,GL_ELEMENT_ARRAY_BUFFER);
-	        glBufferData(
-	                    GL_ELEMENT_ARRAY_BUFFER,
-	                    m->mNumFaces * 3 * sizeof(unsigned int),
-	                    &indices[0],
-	                    GL_STATIC_DRAW
-	                    );
-	        o.ntri = m->mNumFaces;
-			glERR("opengl:indexsetup");
-		}
-		objects.push_back(std::move(op));
- 
-	}
+
 	{
 	    if(!mat->sha.load(meshv, meshf, 0, 0, 0, false))
 	    	exit(-1);
@@ -448,11 +301,32 @@ int main(int argc, char **argv)
 	std::cout << "View is\n" <<  View  << std::endl;
 	std::cout << "Model is\n" <<  Model << std::endl;
 	std::cout << "Matrix is\n" << Proj * View * Model << std::endl;
+
+	ArcBall hb(Eigen::Vector3f(0,0,0),0.75,window->screenToNDC());
+
 	matrixsetup ms;
 	ms.V = View;
 	ms.M = Model;
 	ms.P = Proj;
 	ms.N = (ms.V*ms.M).block<3,3>(0,0).transpose();
+
+	window->movefx = [&hb] (GLFWwindow *w,double x, double y) 
+	{
+		if(glfwGetMouseButton(w,0) == GLFW_PRESS)
+		{
+			hb.drag(Eigen::Vector2f(x,y));
+		}
+	};
+
+	window->mousefx = [&hb] (GLFWwindow *w,int button, int action, int mods) 
+	{
+		if(button == 0 && action == GLFW_PRESS)
+		{
+			double p[2];
+			glfwGetCursorPos(w,&p[0],&p[1]); // make helper
+			hb.beginDrag(Eigen::Vector2f(p[0],p[1]));
+		}		
+	};	
 	do {
 
 		// render to multi target FBO owned by the deferred tool
@@ -461,6 +335,7 @@ int main(int argc, char **argv)
 	        //GLViewportScope view(def.fbo.size());
 	        glClearColor(0.0,0.0,0.0,1.0);
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+			ms.M = hb.getTransformation();
 			for(auto & o : objects)
 				o->render(ms);
 		}
@@ -469,18 +344,10 @@ int main(int argc, char **argv)
 		def.render();
 		glERR("opengl:after def render");
 
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(*window);
 		glfwPollEvents();
 	} 
-	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
+	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	glfwTerminate();
 
-	/*
-	TODO: save pos and normal FLOAT to proper output format
-	*/
-
-	// DATA available in fbo
-	// extract texture
-	// save to image
-	glfwTerminate();
 }

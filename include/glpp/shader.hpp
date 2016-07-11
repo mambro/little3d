@@ -116,9 +116,9 @@ public:
 
 	int uloc;
 
-	void init(Shader & s, const char * name)
+	void init(Shader & s, const char * name, bool needed = true)
 	{
-		uloc = s.uniformLocation(name,true);
+		uloc = s.uniformLocation(name,needed);
 	}
 };
 

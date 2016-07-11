@@ -101,9 +101,9 @@ int main(int argc, char **argv)
 	glERR("opengl:draw");
 		}
 
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(*window);
 		glfwPollEvents();
 	} 
-	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
+	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	glfwTerminate();
 }
