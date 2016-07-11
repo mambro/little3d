@@ -26,7 +26,6 @@ int main(int argc, char **argv)
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
 	std::shared_ptr<material> mat = std::make_shared<material>();
-
 	assimploader(argv[1],objects,mat);
 
 	// custom shader

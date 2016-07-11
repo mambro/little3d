@@ -175,6 +175,17 @@ public:
 		glBindFramebuffer(what,0);
 	}
 
+	/// copies the depth buffer from the current FBO to the default one
+	void blitdepth()
+	{
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, resource_);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // Write to default framebuffer
+		glBlitFramebuffer(
+			  0, 0, size_.width, size_.height, 0, 0, size_.width, size_.height, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+		);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
 	GLSize size() const { return size_; }
 
 	/**
@@ -291,6 +302,8 @@ public:
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 			return true;
 		}
+
+
 
 	};	
 private:

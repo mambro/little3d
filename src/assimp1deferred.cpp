@@ -103,17 +103,6 @@ void main()
 
 );
 
-/*
-struct Light {
-    vec3 Position;
-    vec3 Color;
-    
-    float Linear;
-    float Quadratic;
-};
-const int NR_LIGHTS = 32;
-uniform Light lights[NR_LIGHTS];
-*/
 const char * defshaf = GLSL330(
 out vec4 FragColor;
 in vec2 TexCoords;
@@ -121,39 +110,47 @@ in vec2 TexCoords;
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
-/*
 uniform vec3 viewPos;
-*/
+
+
+struct Light {
+    vec3 Position;
+    vec3 Color;
+    
+    float Linear;
+    float Quadratic;
+};
+const int NR_LIGHTS = 1;
+uniform Light lights[NR_LIGHTS];
+
 
 void main()
 {             
-    // Retrieve data from gbuffer
     vec3 FragPos = texture(gPosition, TexCoords).rgb;
     vec3 Normal = texture(gNormal, TexCoords).rgb; // TODO: optimize decode
     vec4 DiSpec = texture(gAlbedoSpec, TexCoords);
     vec3 Diffuse = DiSpec.rgb;
     float Specular = DiSpec.a;
-    /*
-    // Then calculate lighting as usual
+    
     vec3 lighting  = Diffuse * 0.1; // hard-coded ambient component
     vec3 viewDir  = normalize(viewPos - FragPos);
 
+    // Then calculate lighting as usual
+
     // Diffuse
-    vec3 lightDir = normalize(lights[i].Position - FragPos);
-    vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * lights[i].Color;
+    vec3 lightDir = normalize(lights[0].Position - FragPos);
+    vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * lights[0].Color;
     // Specular
     vec3 halfwayDir = normalize(lightDir + viewDir);  
     float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
-    vec3 specular = lights[i].Color * spec * Specular;
+    vec3 specular = lights[0].Color * spec * Specular;
     // Attenuation
-    float distance = length(lights[i].Position - FragPos);
-    float attenuation = 1.0 / (1.0 + lights[i].Linear * distance + lights[i].Quadratic * distance * distance);
+    float distance = length(lights[0].Position - FragPos);
+    float attenuation = 1.0 / (1.0 + lights[0].Linear * distance + lights[0].Quadratic * distance * distance);
     diffuse *= attenuation;
     specular *= attenuation;
     lighting += diffuse + specular;
     FragColor = vec4(lighting, 1.0);
-	*/
-    FragColor = vec4(Diffuse, 1.0);
 
 }
 );
@@ -189,6 +186,7 @@ struct Deferred
 	ColorTexture tnormal;
 	ColorTexture tpos;
 	Shader sha;
+	WrappedUniform<Eigen::Vector3f> viewpos;
 
 	Deferred(int width,int height)
 	{
@@ -216,6 +214,8 @@ struct Deferred
 		    sha.uniform<int>("gNormal") = 2;
 		}
 
+		viewpos.init(sha,"viewpos");
+
         {
         	const int pos_attrib = 0;
         	const int tex_attrib = 1;
@@ -240,13 +240,15 @@ struct Deferred
 //            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 	}
 
-	void render()
+	void render(Eigen::Matrix4f viewcam)
 	{
+
         GLScope<Texture> t1(trgb,GL_TEXTURE_2D,0);
         GLScope<Texture> t2(tpos,GL_TEXTURE_2D,1);
         GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,2);
         GLScope<VAO> xvao(vao);
         GLScope<Shader> xsha(sha);
+        viewpos << viewcam.block<4,1>(0,3);
         GLScopeDisable<GL_DEPTH_WRITEMASK> xdw;
         GLScopeDisable<GL_DEPTH_TEST> xdt; // no need to write or read depth
         //glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -341,7 +343,7 @@ int main(int argc, char **argv)
 		}
 
 		glERR("opengl:pre defrender");
-		def.render();
+		def.render(ms.V);
 		glERR("opengl:after def render");
 
 		glfwSwapBuffers(*window);
