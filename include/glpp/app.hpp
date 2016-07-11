@@ -7,6 +7,9 @@
 #include <glew.h>
 #endif
 #include <GLFW/glfw3.h>
+#include <memory>
+#include <Eigen/Dense>
+#include <functional>
 
 namespace glpp
 {
@@ -21,13 +24,44 @@ namespace glpp
 		float ppmm; // pixerl per millimeter
 
 		operator GLFWwindow* () { return window; }
+
+		Eigen::Matrix4f screenToNDC() 
+		{
+			Eigen::Matrix4f r;
+			r << 2.0/innerWidth,0,0,-1,
+				0,2.0/innerHeight,0,-1,
+				0,0,1.0,0,
+				0,0,0,1;
+			return r;
+		}
+
+		std::function<void(GLFWwindow *,int button, int action, int mods)> mousefx;
+		std::function<void(GLFWwindow*,double x, double y)> movefx;
+
+		void bind()
+		{
+			glfwSetMouseButtonCallback(window,[] (GLFWwindow* window, int button, int action, int mods)
+			{
+					XGLFWwindow * p = (XGLFWwindow*)glfwGetWindowUserPointer(window);
+					if(p->mousefx)
+						p->mousefx(window,button,action,mods);
+			});
+			glfwSetCursorPosCallback(window,[] (GLFWwindow* window,double x, double y)
+			{
+					XGLFWwindow * p = (XGLFWwindow*)glfwGetWindowUserPointer(window);
+					if(p->movefx)
+						p->movefx(window,x,y);
+			});
+		}
+
 	};
 
-	inline  XGLFWwindow  init(int width,int height, const char * title = "tmp", bool visible = true)
+	inline  std::shared_ptr<XGLFWwindow> init(int width,int height, const char * title = "tmp", bool visible = true)
 	{
+		using T = XGLFWwindow;
 		if( !glfwInit() )
 		{
-			return XGLFWwindow();
+			return std::shared_ptr<T>(0);
 		}
 
 		//glfwWindowHint(GLFW_SAMPLES, 4);
@@ -43,7 +77,7 @@ namespace glpp
 		if( window == NULL )
 		{
 			glfwTerminate();
-			return XGLFWwindow();
+			return std::shared_ptr<T>(0);
 		}
 
 		glfwMakeContextCurrent(window);
@@ -52,7 +86,7 @@ namespace glpp
 		glewExperimental = true; // Needed for core profile
 		if (glewInit() != GLEW_OK) 
 		{
-			return XGLFWwindow();
+			return std::shared_ptr<T>(0);
 		}
 #endif
 		//glERR("glew:init");
@@ -60,6 +94,7 @@ namespace glpp
 		// Ensure we can capture the escape key being pressed below
 		// Ensure we can capture the escape key being pressed below
 		glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+
 		// Dark blue background
 
 		// Enable depth test
@@ -69,7 +104,7 @@ namespace glpp
 	 
 		glClearColor(0.0f, 0.0f, 0.2f, 0.0f);	
 		auto monitor = glfwGetWindowMonitor(window);
-		XGLFWwindow r;
+		T r;
 		r.window = window;
 		r.innerWidth = width;
 		r.innerHeight = height;
@@ -87,8 +122,12 @@ namespace glpp
 			}
 		}
 
+		std::shared_ptr<T> rr = std::make_shared<T>(r);
+		glfwSetWindowUserPointer(window,rr.get());
+		rr->bind();// link
+
 		//r.devicePixelRatio = 0;
-		return r;
+		return rr;
 	}
 
 }

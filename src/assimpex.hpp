@@ -2,8 +2,8 @@
 
 struct matrixsetup
 {
-	Eigen::Matrix4f MVP;
 	Eigen::Matrix4f VM;
+	Eigen::Matrix4f M;
 	Eigen::Matrix4f P;
 	Eigen::Matrix3f N;
 };

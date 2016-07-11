@@ -7,6 +7,7 @@
 #include <assimp/postprocess.h>     // Post processing flags
 #include <Eigen/Geometry>
 #include <iostream>
+#include "glpp/ArcBall.hpp"
 
 using namespace glpp;
 
@@ -82,8 +83,8 @@ const char * meshf = GLSL330(
 
 struct matrixsetup
 {
-	Eigen::Matrix4f MVP;
-	Eigen::Matrix4f VM;
+	Eigen::Matrix4f V;
+	Eigen::Matrix4f M;
 	Eigen::Matrix4f P;
 	Eigen::Matrix3f N;
 };
@@ -111,10 +112,11 @@ struct material
 
 	void enter(matrixsetup & x)
 	{
+		Eigen::Matrix4f VM = x.V*x.M;
 		sha.bind();
-		uVM << x.VM;
+		uVM << VM;
 		uP << x.P;
-		uN << x.N;
+		uN << VM.block<3,3>(0,0).transpose();
 		tex.bind(GL_TEXTURE_2D,0);
 	}
 
@@ -278,6 +280,8 @@ int main(int argc, char **argv)
 	    mat->initshader();
 		glERR("opengl:setup");
 	}
+	ArcBall hb(Eigen::Vector3f(0,0,0),0.75,window->screenToNDC());
+
 	std::cout << "go...\n";
 	//glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -295,19 +299,39 @@ int main(int argc, char **argv)
 	std::cout << "Model is\n" <<  Model << std::endl;
 	std::cout << "Matrix is\n" << Proj * View * Model << std::endl;
 	matrixsetup ms;
-	ms.VM = View*Model;
+	ms.V = View;
+	ms.M = Model;
 	ms.P = Proj;
-	ms.N = ms.VM.block<3,3>(0,0).transpose();
 	GLImageProc imgproc;
 	imgproc.init();
+
+	window->movefx = [&hb] (GLFWwindow *w,double x, double y) 
+	{
+		if(glfwGetMouseButton(w,0) == GLFW_PRESS)
+		{
+			hb.drag(Eigen::Vector2f(x,y));
+		}
+	};
+
+	window->mousefx = [&hb] (GLFWwindow *w,int button, int action, int mods) 
+	{
+		if(button == 0 && action == GLFW_PRESS)
+		{
+			double p[2];
+			glfwGetCursorPos(w,&p[0],&p[1]); // make helper
+			hb.beginDrag(Eigen::Vector2f(p[0],p[1]));
+		}		
+	};
+
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		ms.M = hb.getTransformation();
 		//imgproc.runOnScreen(objects[0]->mat->tex);
 		for(auto & o : objects)
 			o->render(ms);
-		glfwSwapBuffers(window);
+		glfwSwapBuffers(*window);
 		glfwPollEvents();
 	} 
-	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(window) == 0 );
+	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	glfwTerminate();
 }
