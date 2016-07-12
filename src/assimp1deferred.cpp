@@ -215,7 +215,7 @@ struct Deferred
 			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_WIDTH, &w);
 			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_HEIGHT, &h);
 			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_INTERNAL_FORMAT, &f);
-			std::cout << "pos texture " << w << " " << h << " " << f << std::endl;
+			std::cout << "pos texture " << w << " " << h << " " << std::hex << f << std::dec << std::endl;
 		}
 		{
 			FBO::Setup s(fbo);
