@@ -13,6 +13,15 @@
 #include "assimpex.hpp"
 #include "glpp/ArcBall.hpp"
 
+struct Light {
+    Eigen::Vector3f position;
+    Eigen::Vector3f color;
+    
+    float linear;
+    float quadratic;
+};
+
+
 using namespace glpp;
 
 	const char * meshv = GLSL330(
@@ -104,6 +113,7 @@ void main()
 );
 
 const char * defshaf = GLSL330(
+
 out vec4 FragColor;
 in vec2 TexCoords;
 
@@ -126,13 +136,13 @@ uniform Light lights[NR_LIGHTS];
 
 void main()
 {             
-    vec3 FragPos = texture(gPosition, TexCoords).rgb;
-    vec3 Normal = texture(gNormal, TexCoords).rgb; // TODO: optimize decode
-    vec4 DiSpec = texture(gAlbedoSpec, TexCoords);
+    vec3 FragPos = texture(gPosition,   TexCoords).rgb;
+    vec3 Normal  = texture(gNormal,     TexCoords).rgb; // TODO: optimize decode
+    vec4 DiSpec  = texture(gAlbedoSpec, TexCoords);
     vec3 Diffuse = DiSpec.rgb;
     float Specular = DiSpec.a;
     
-    vec3 lighting  = Diffuse * 0.1; // hard-coded ambient component
+    vec3 lighting  = Diffuse * 0.8; // hard-coded ambient component
     vec3 viewDir  = normalize(viewPos - FragPos);
 
     // Then calculate lighting as usual
@@ -150,7 +160,7 @@ void main()
     diffuse *= attenuation;
     specular *= attenuation;
     lighting += diffuse + specular;
-    FragColor = vec4(lighting, 1.0);
+    FragColor = vec4(FragPos, 1.0);
 
 }
 );
@@ -182,39 +192,53 @@ struct Deferred
 	VAO vao;
 	VBO<1> vvbo;
 	FBO fbo;
+	GLSize size_;
 	ColorTexture trgb;
 	ColorTexture tnormal;
 	ColorTexture tpos;
 	Shader sha;
-	WrappedUniform<Eigen::Vector3f> viewpos;
+	WrappedUniform<Eigen::Vector3f> viewPos;
 
-	Deferred(int width,int height)
+	Deferred(int width,int height): size_(width,height)
 	{
 		vao.init();
 		vvbo.init();
-		trgb.initcolor(GLSize(width,height),GL_RGBA,GL_RGBA,GL_UNSIGNED_BYTE); 
-		tnormal.initcolor(GLSize(width,height),GL_RGB16F,GL_RGB,GL_FLOAT);  // float
-		tpos.initcolor(GLSize(width,height),GL_RGB16F,GL_RGB,GL_FLOAT); // float
+
+		// prepare textues
+		trgb.init(size_,true,false); 
+		tnormal.init(size_,false,true);
+		tpos.init(size_,false,true); 
 		{
-			// only GLES3+ GL3.3+
+			GLScope<Texture> s(tnormal);
+			int w, h,f;
+			int miplevel = 0;
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_WIDTH, &w);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_HEIGHT, &h);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_INTERNAL_FORMAT, &f);
+			std::cout << "pos texture " << w << " " << h << " " << f << std::endl;
+		}
+		{
 			FBO::Setup s(fbo);
-			s.attach(trgb);
-			s.makedepth();
+			s.attach(trgb,0);
 			s.attach(tnormal,1);
 			s.attach(tpos,2);
+			s.makedepth();
 		}
 
 		{
 		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
+		    {
+		    	std::cout << "failed Deferred shader" << std::endl;
 		    	exit(-1);
+		    }
+		    // link the input uniforms for the textures
 		    GLScope<Shader> ss(sha);
-		    std::cerr << "def shader setup\n";
-		    sha.uniform<int>("gAlbedoSpec") = 0;
-		    sha.uniform<int>("gPosition") = 1;
-		    sha.uniform<int>("gNormal") = 2;
+		    sha.uniform<int>("gAlbedoSpec") << 0;
+		    sha.uniform<int>("gPosition") << 1;
+		    sha.uniform<int>("gNormal") << 2;
 		}
 
-		viewpos.init(sha,"viewpos");
+		viewPos = sha.uniform<Eigen::Vector3f>("viewPos");
 
         {
         	const int pos_attrib = 0;
@@ -240,15 +264,26 @@ struct Deferred
 //            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 	}
 
+	void setLight(int index, Light l)
+	{
+		GLScope<Shader> x(sha);
+		std::string prefix = "lights[" + std::to_string(index) + "].";
+
+		sha.uniform<Eigen::Vector3f>(prefix + "position") << l.position;
+		sha.uniform<Eigen::Vector3f>(prefix + "color") << l.color;
+		sha.uniform<float>(prefix + "linear") << l.linear;
+		sha.uniform<float>(prefix + "quadratic") << l.quadratic;
+	}
+
 	void render(Eigen::Matrix4f viewcam)
 	{
 
-        GLScope<Texture> t1(trgb,GL_TEXTURE_2D,0);
-        GLScope<Texture> t2(tpos,GL_TEXTURE_2D,1);
-        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,2);
         GLScope<VAO> xvao(vao);
         GLScope<Shader> xsha(sha);
-        viewpos << viewcam.block<4,1>(0,3);
+        GLScope<Texture> t1(trgb,   GL_TEXTURE_2D,0);
+        GLScope<Texture> t2(tpos,   GL_TEXTURE_2D,1);
+        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,2);
+        viewPos << viewcam.block<3,1>(0,3);
         GLScopeDisable<GL_DEPTH_WRITEMASK> xdw;
         GLScopeDisable<GL_DEPTH_TEST> xdt; // no need to write or read depth
         //glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -269,10 +304,8 @@ int main(int argc, char **argv)
 	int width = 640;
 	int height = 480;
 	auto window = glpp::init(width,height,"hello deferred");
-	std::cout << "asked " << width << " " << height << " real " << window->realWidth<< " " << window->realHeight << std::endl;
-		glERR("opengl:after init");
 	Deferred def(window->realWidth,window->realHeight);
-		glERR("opengl:after deferred");
+	glERR("opengl:after deferred");
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
 	std::shared_ptr<material> mat = std::make_shared<material>();
@@ -289,6 +322,13 @@ int main(int argc, char **argv)
 	std::cout << "go...\n";
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	Light l;
+	l.position = Eigen::Vector3f(1.0,1.0,2.0);
+	l.color = Eigen::Vector3f(1.0,1.0,0.0);
+	l.linear = 0.0;
+	l.quadratic = 0.0;
+	def.setLight(0,l);
 
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
@@ -334,7 +374,7 @@ int main(int argc, char **argv)
 		// render to multi target FBO owned by the deferred tool
 		{
 			GLScope<FBO> s(def.fbo);
-	        //GLViewportScope view(def.fbo.size());
+	        GLViewportScope view(def.fbo.size());
 	        glClearColor(0.0,0.0,0.0,1.0);
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 			ms.M = hb.getTransformation();
@@ -350,6 +390,14 @@ int main(int argc, char **argv)
 		glfwPollEvents();
 	} 
 	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
+	/*
+	if(!def.trgb.save("color.png"))
+		std::cout << "failed saveccolor\n";
+	if(!def.tnormal.save("normal.exr"))
+		std::cout << "failed save normal\n";
+	if(!def.tpos.save("pos.exr"))
+		std::cout << "failed save tpos\n";
+	*/
 	glfwTerminate();
 
 }

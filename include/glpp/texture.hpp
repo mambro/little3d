@@ -1,5 +1,7 @@
 #include "SOIL/SOIL.h"
 #include "stb_image_write.h"
+#define TINYEXR_IMPLEMENTATION
+#include "tinyexr.h"
 #include "lodepng.h"
 #ifndef COCO_FATAL
 #define COCO_ERR() std::cout
@@ -234,7 +236,7 @@ public:
     {
         release();
     }
-    void initcolor(GLSize size = {0, 0}, GLenum internalFormat = GL_RGBA,
+    bool initcolor(GLSize size = {0, 0}, GLenum internalFormat = GL_RGBA,
               GLenum externalFormat = GL_RGBA,GLenum type = GL_UNSIGNED_BYTE)
     {
         release();
@@ -252,9 +254,10 @@ public:
         //glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        channels_ = format_ == GL_RED  || format_ == GL_DEPTH_COMPONENT ? 1 : format_ == GL_RGBA ? 4: 3;
+        channels_ = format_ == GL_RED  || format_ == GL_DEPTH_COMPONENT ? 1 : format_ == GL_RGBA ? 4: 3;        
+        return glERR("color");;
     }
-    void initdepth(GLSize size, bool usefloat = true)
+    bool initdepth(GLSize size, bool usefloat = true)
     {
         release();
         glERR("preinitdepth");
@@ -271,7 +274,8 @@ public:
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D,0);
-        glERR("initdepth");
+        
+        return glERR("initdepth");;
     }
     bool load(const std::string &path)
     {
@@ -449,7 +453,33 @@ public:
             }
             case GL_FLOAT:
             {
-            return false;
+                std::cout << "EXR save " << std::endl;
+
+                EXRImage image;
+                memset(&image,0,sizeof(image));
+
+                int  pt[4] = {TINYEXR_PIXELTYPE_FLOAT,TINYEXR_PIXELTYPE_FLOAT,TINYEXR_PIXELTYPE_FLOAT,TINYEXR_PIXELTYPE_FLOAT};
+                int rpt[4] = {TINYEXR_PIXELTYPE_HALF,TINYEXR_PIXELTYPE_HALF,TINYEXR_PIXELTYPE_HALF,TINYEXR_PIXELTYPE_HALF};
+                float * image_ptr[4] = { (float*)&buffer[0], (float*)&buffer[0]+1,(float*)&buffer[0]+2,(float*)&buffer[0]+3};
+                const char* channel_names[] = {"A", "B", "G", "R"}; // must be ABGR order.
+                image.num_custom_attributes = 0;
+                image.pixel_aspect_ratio = 1.0;
+                image.num_channels = channels_;
+                image.compression = 0;
+                image.channel_names = channel_names;
+                image.width = size_.width;
+                image.height = size_.height;
+                image.pixel_types = pt;
+                image.requested_pixel_types  = rpt;
+                image.images = (unsigned char**)image_ptr;
+                const char * err = 0;
+                if(SaveMultiChannelEXRToFile(&image, filename.c_str(), &err) != 0)
+                {
+                    std::cout << "EXR save error "<< err << std::endl;
+                    return false;
+                }
+                else
+                    return true;
 
             }
             case GL_UNSIGNED_BYTE:
@@ -486,17 +516,25 @@ private:
 class DepthTexture: public Texture
 {
 public:
-    void init(GLSize size, bool asfloat) { Texture::initdepth(size,asfloat); }
+    bool init(GLSize size, bool asfloat) { return Texture::initdepth(size,asfloat); }
 };
 
 // types
 class ColorTexture: public Texture
 {
 public:
-    void init(GLSize size, bool alpha) { Texture::initcolor(size,alpha ? GL_RGBA: GL_RGB,alpha ? GL_RGBA: GL_RGB,GL_UNSIGNED_BYTE); }
+    bool init(GLSize size, bool alpha = true, bool isfloat = false) 
+    { 
+        if(!isfloat)
+            return Texture::initcolor(size,alpha ? GL_RGBA: GL_RGB,alpha ? GL_RGBA: GL_RGB,GL_UNSIGNED_BYTE); 
+        else
+            return Texture::initcolor(size,alpha ? GL_RGBA32F:GL_RGB32F, alpha ? GL_RGBA : GL_RGB,GL_FLOAT);
+    }
 };
 
 /// Texture sampler overrides Texture parameters attached to the same Texture unit
+///
+/// bind it with the same texture unit
 class Sampler
 {
 public:

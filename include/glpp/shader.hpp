@@ -4,8 +4,10 @@
 #define GLSL330(src) "#version 330\n" #src
 #define GLSL(src) #src
 
+
 //#include "SOIL.h"
 #include <stdio.h>
+#include <string>
 #include <stdlib.h> // memory management
 #include <string>
 #include <vector>
@@ -95,6 +97,12 @@ public:
 	WrappedUniform<T> uniform(const char * name)
 	{
 		return WrappedUniform<T>(glGetUniformLocation(resource_,name));
+	}
+
+	template <class T>
+	WrappedUniform<T> uniform(const std::string & x)
+	{
+		return WrappedUniform<T>(glGetUniformLocation(resource_,x.c_str()));
 	}
 
 	template <class T>

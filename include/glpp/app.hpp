@@ -10,10 +10,10 @@
 #include <memory>
 #include <Eigen/Dense>
 #include <functional>
+#include <iostream>
 
 namespace glpp
 {
-	// TODO: add glfwSetWindowUserPointer 
 
 	struct XGLFWwindow
 	{
@@ -115,6 +115,7 @@ namespace glpp
 		r.innerRatio = width/(float)height;
 		r.realWidth = q[2];
 		r.realHeight = q[3];
+		std::cout << "app window " << r.innerWidth << "x" << r.innerHeight << " viewport " << q[2] << "x" << q[3] << std::endl; 
 
 		int widthMM, heightMM;
 		if(monitor)
