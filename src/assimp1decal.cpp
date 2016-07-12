@@ -14,6 +14,7 @@ const char * meshv = GLSL330(
 	layout(location = 1) in vec3 vertexNormal_modelspace;
 	uniform mat4 m_VM;
 	uniform mat4 m_P;
+	uniform mat4 m_M;
 	uniform mat3 m_N;
 	uniform vec3 l_pos;
 	out vec3 DataIn_normal;

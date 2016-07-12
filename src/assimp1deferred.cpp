@@ -93,7 +93,7 @@ const char * meshf = GLSL330(
 	    // Store specular intensity in gAlbedoSpec's alpha component
 	    //gAlbedoSpec.a = texture(texture_specular1, TexCoords).r;
 
-	    gAlbedoSpec = o;
+	    gAlbedoSpec = o; //vec4(normalize(FragPos),1.0);
 	}
 
 );
@@ -160,7 +160,7 @@ void main()
     diffuse *= attenuation;
     specular *= attenuation;
     lighting += diffuse + specular;
-    FragColor = vec4(FragPos, 1.0);
+    FragColor = vec4(Normal, 1.0);
 
 }
 );
@@ -206,10 +206,14 @@ struct Deferred
 
 		// prepare textues
 		trgb.init(size_,true,false); 
-		tnormal.init(size_,false,true);
-		tpos.init(size_,false,true); 
+		tnormal.init(size_,true,false);
+		tpos.init(size_,true,false); 
 		{
-			GLScope<Texture> s(tnormal);
+			GLScope<Texture> s(tpos);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			int w, h,f;
 			int miplevel = 0;
 			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_WIDTH, &w);
@@ -218,9 +222,22 @@ struct Deferred
 			std::cout << "pos texture " << w << " " << h << " " << std::hex << f << std::dec << std::endl;
 		}
 		{
+			GLScope<Texture> s(tnormal);
+			int w, h,f;
+			int miplevel = 0;
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_WIDTH, &w);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_HEIGHT, &h);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_INTERNAL_FORMAT, &f);
+			std::cout << "normal texture " << w << " " << h << " " << std::hex << f << std::dec << std::endl;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		}
+		{
 			FBO::Setup s(fbo);
-			s.attach(trgb,0);
-			s.attach(tnormal,1);
+			s.attach(tnormal,0); //  first is normal
+			s.attach(trgb,1);
 			s.attach(tpos,2);
 			s.makedepth();
 		}
@@ -231,11 +248,11 @@ struct Deferred
 		    	std::cout << "failed Deferred shader" << std::endl;
 		    	exit(-1);
 		    }
-		    // link the input uniforms for the textures
+		    // link the input uniforms for the textures FOR OUTPUT
 		    GLScope<Shader> ss(sha);
-		    sha.uniform<int>("gAlbedoSpec") << 0;
-		    sha.uniform<int>("gPosition") << 1;
-		    sha.uniform<int>("gNormal") << 2;
+		    sha.uniform<int>("gAlbedoSpec") << 1;
+		    sha.uniform<int>("gPosition") << 2;
+		    sha.uniform<int>("gNormal") << 0;
 		}
 
 		viewPos = sha.uniform<Eigen::Vector3f>("viewPos");
@@ -279,10 +296,10 @@ struct Deferred
 	{
 
         GLScope<VAO> xvao(vao);
-        GLScope<Shader> xsha(sha);
-        GLScope<Texture> t1(trgb,   GL_TEXTURE_2D,0);
-        GLScope<Texture> t2(tpos,   GL_TEXTURE_2D,1);
-        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,2);
+        GLScope<Shader> xsha(sha);        
+        GLScope<Texture> t1(trgb,   GL_TEXTURE_2D,1);
+        GLScope<Texture> t2(tpos,   GL_TEXTURE_2D,2);
+        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,0);
         viewPos << viewcam.block<3,1>(0,3);
         GLScopeDisable<GL_DEPTH_WRITEMASK> xdw;
         GLScopeDisable<GL_DEPTH_TEST> xdt; // no need to write or read depth
@@ -371,10 +388,10 @@ int main(int argc, char **argv)
 	};	
 	do {
 
+		glERR("opengl:pre defrender");
 		// render to multi target FBO owned by the deferred tool
 		{
 			GLScope<FBO> s(def.fbo);
-	        GLViewportScope view(def.fbo.size());
 	        glClearColor(0.0,0.0,0.0,1.0);
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 			ms.M = hb.getTransformation();
@@ -390,14 +407,16 @@ int main(int argc, char **argv)
 		glfwPollEvents();
 	} 
 	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
-	/*
-	if(!def.trgb.save("color.png"))
-		std::cout << "failed saveccolor\n";
-	if(!def.tnormal.save("normal.exr"))
-		std::cout << "failed save normal\n";
-	if(!def.tpos.save("pos.exr"))
-		std::cout << "failed save tpos\n";
-	*/
+	
+	if(argc > 2)
+	{
+		if(!def.trgb.save("color.png"))
+			std::cout << "failed saveccolor\n";
+		if(!def.tnormal.save("normal.exr"))
+			std::cout << "failed save normal\n";
+		if(!def.tpos.save("pos.exr"))
+			std::cout << "failed save tpos\n";
+	}
 	glfwTerminate();
 
 }

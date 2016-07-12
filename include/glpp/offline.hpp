@@ -63,7 +63,8 @@ inline bool checkFramebufferStatus(GLenum status)
 
  * Note on output and buffers:
  	   glBindFragDataLocation (renderer_1prog, GL_COLOR_ATTACHMENT0, "diffuse_out");
-   ALTERNATIVE to layout(location = x)
+   ALTERNATIVE 
+   to layout(location = x)
  */
 class FBO
 {
@@ -168,11 +169,14 @@ public:
 	void bind(GLenum what = GL_FRAMEBUFFER)
 	{
 		glBindFramebuffer(what,resource_);
+		GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
+		glDrawBuffers(colors_, DrawBuffers); // "1" is the size of DrawBuffers		
 	}
 
 	void unbind(GLenum what= GL_FRAMEBUFFER)
 	{
 		glBindFramebuffer(what,0);
+		glDrawBuffer(GL_BACK);
 	}
 
 	/// copies the depth buffer from the current FBO to the default one
@@ -195,6 +199,7 @@ public:
 	struct Setup
 	{
 		FBO & fbo;
+		int db = 0;
 		Setup(FBO & f) : fbo(f)
 		{
 			if(!fbo)
@@ -204,6 +209,10 @@ public:
 
 		~Setup()
 		{
+			std::cout << "FBO finish with " << db << " colors " << std::endl;
+			fbo.colors_ = db;
+			GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
+			glDrawBuffers(db,DrawBuffers);
 			fbo.checkvalidate();
 			fbo.unbind();
 		}
@@ -222,8 +231,9 @@ public:
 				size_ = t.size();
 				glERR("preattachcolor");
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
-				std::cerr << "FBO attachcolor texture for color attachment " << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)fbo << std::endl;
+				std::cerr << "FBO attachcolor texture for color attachment:" << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)fbo << std::endl;
 				glERR("attachcolor");
+				db++;
 			}
 		}
 
@@ -238,10 +248,11 @@ public:
 			else
 			{
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)t, 0);
-				std::cerr << "FBO attachdepth texture for depth attachment " << (GLuint)t  << " @fbo " << (GLuint)fbo << std::endl;
+				std::cerr << "FBO attachdepth texture for depth attachment:" << (GLuint)t  << " @fbo " << (GLuint)fbo << std::endl;
 				glERR("attachdepth");
 			}
 		}
+
 
 		void attach(const ColorTexture & t, int index = 0)
 		{
@@ -249,8 +260,9 @@ public:
 			size_ = t.size();
 			glERR("preattachcolor");
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, (GLuint)t, 0);		
-			std::cerr << "FBO attachcolor texture for color attachment " << index << " " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)fbo << std::endl;
+			std::cerr << "FBO attachcolor texture for color attachment:" << index << " texture " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)fbo << std::endl;
 			glERR("attachcolor");
+			db++;
 		}
 
 		void attach(const DepthTexture & t)
@@ -259,7 +271,7 @@ public:
 			glERR("preattachdepth");
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, (GLuint)t, 0);
 			glERR("attachdepth");
-			std::cerr << "FBO attachdepth texture for depth attachment " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)fbo << std::endl;
+			std::cerr << "FBO attachdepth texture for depth attachment texture " << (GLuint)t << " " << size_.width << "x" << size_.height << " @fbo " << (GLuint)fbo << std::endl;
 		}
 
 		void nocolor()
@@ -311,5 +323,6 @@ private:
 	GLSize size_ = {0,0};
 	GLuint resource_ = 0;
 	GLuint rboDepthStencil_ = 0,rboColor_ = 0;
+	int colors_ = 0;
 };
 }

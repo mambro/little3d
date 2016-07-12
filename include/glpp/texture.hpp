@@ -236,22 +236,25 @@ public:
     {
         release();
     }
+
+    // https://www.opengl.org/wiki/Image_Format#Required_formats
+    //
+    // For Render Targets: RGBA, RG, RED with unsigned normalized/float/signed integral/unsigned integral 8 16 32
     bool initcolor(GLSize size = {0, 0}, GLenum internalFormat = GL_RGBA,
               GLenum externalFormat = GL_RGBA,GLenum type = GL_UNSIGNED_BYTE)
     {
         release();
+        glERR("precolor");
         size_ = size;
         format_ = internalFormat;
         type_ = type;
 
         glGenTextures(1, &resource_);
-        //glActiveTexture(GL_TEXTURE0);
+        std::cout << "initcolor for " << resource_ << " size " << size << std::hex << " if:" << internalFormat << " ext:" << externalFormat << " type: " << type << std::dec << std::endl; 
         glBindTexture(GL_TEXTURE_2D, resource_);
-        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.width, size.height,
-                     0, externalFormat, type, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.width, size.height, 0, externalFormat, type, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        //glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
 
         channels_ = format_ == GL_RED  || format_ == GL_DEPTH_COMPONENT ? 1 : format_ == GL_RGBA ? 4: 3;        

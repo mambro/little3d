@@ -88,6 +88,7 @@ struct material
 {
 	void initshader()
 	{
+		uM.init(sha,"m_M");
 		uVM.init(sha,"m_VM");
 		uP.init(sha,"m_P");
 		uN.init(sha,"m_N");
@@ -109,6 +110,7 @@ struct material
 	{
 		Eigen::Matrix4f VM = x.V*x.M;
 		sha.bind();
+		uM << x.M;
 		uVM << VM;
 		uP << x.P;
 		uN << VM.block<3,3>(0,0).transpose();
@@ -125,8 +127,7 @@ struct material
 	Shader sha;
 	Texture tex;
 
-	WrappedUniform<Eigen::Matrix4f> uVM;
-	WrappedUniform<Eigen::Matrix4f> uP;
+	WrappedUniform<Eigen::Matrix4f> uVM,uM,uP;
 	WrappedUniform<Eigen::Matrix3f> uN;
 	WrappedUniform<Eigen::Vector3f> l_pos;
 	WrappedUniform<Eigen::Vector4f> diffuse,ambient,specular;

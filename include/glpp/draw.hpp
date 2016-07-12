@@ -517,7 +517,6 @@ struct GLScope<FBO>
 		x.bind(mode); 
 	}
 	~GLScope() { glBindFramebuffer(_mode,0); }
-	// for syntax: if(GLScope<FBO> _ = pippo)
 	operator bool() { return true; }
 	GLViewportScope _view;
 	GLenum _mode;
