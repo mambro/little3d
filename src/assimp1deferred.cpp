@@ -55,8 +55,8 @@ using namespace glpp;
 
 const char * meshf = GLSL330(
 	layout (location = 0) out vec4 gAlbedoSpec;
-	layout (location = 1) out vec3 gNormal;
-	layout (location = 2) out vec3 gPosition;
+	layout (location = 1) out vec4 gNormal;
+	layout (location = 2) out vec4 gPosition;
 
 		uniform vec4 diffuse;
 		uniform vec4 ambient;
@@ -85,9 +85,9 @@ const char * meshf = GLSL330(
 		//color = o+ 0.00001*vec4(uv,1.0) + 0.00001*diffuse;
 
 	    // Store the fragment position vector in the first gbuffer texture
-	    gPosition = FragPos;
+	    gPosition = vec4(FragPos,1.0);
 	    // Also store the per-fragment normals into the gbuffer
-	    gNormal = normalize(DataIn_normal);
+	    gNormal = vec4(normalize(DataIn_normal),1.0);
 	    // And the diffuse per-fragment color
 	    //gAlbedoSpec.rgb = texture(texture_diffuse1, TexCoords).rgb;
 	    // Store specular intensity in gAlbedoSpec's alpha component
@@ -157,10 +157,8 @@ void main()
     // Attenuation
     float distance = length(lights[0].Position - FragPos);
     float attenuation = 1.0 / (1.0 + lights[0].Linear * distance + lights[0].Quadratic * distance * distance);
-    diffuse *= attenuation;
-    specular *= attenuation;
-    lighting += diffuse + specular;
-    FragColor = vec4(Normal, 1.0);
+    lighting += (diffuse + specular)*attenuation;
+    FragColor = vec4(lighting,1);
 
 }
 );
@@ -206,8 +204,8 @@ struct Deferred
 
 		// prepare textues
 		trgb.init(size_,true,false); 
-		tnormal.init(size_,true,false);
-		tpos.init(size_,true,false); 
+		tnormal.init(size_,true,true);
+		tpos.init(size_,true,true); 
 		{
 			GLScope<Texture> s(tpos);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -236,23 +234,24 @@ struct Deferred
 		}
 		{
 			FBO::Setup s(fbo);
-			s.attach(tnormal,0); //  first is normal
-			s.attach(trgb,1);
+			s.attach(tnormal,1); //  first is normal
+			s.attach(trgb,0);
 			s.attach(tpos,2);
 			s.makedepth();
 		}
 
 		{
-		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
+//		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
+		    if(!sha.load("deferredv.glsl", "deferredf.glsl",0, 0, 0, true))
 		    {
 		    	std::cout << "failed Deferred shader" << std::endl;
 		    	exit(-1);
 		    }
 		    // link the input uniforms for the textures FOR OUTPUT
 		    GLScope<Shader> ss(sha);
-		    sha.uniform<int>("gAlbedoSpec") << 1;
+		    sha.uniform<int>("gAlbedoSpec") << 0;
+		    sha.uniform<int>("gNormal") << 1;
 		    sha.uniform<int>("gPosition") << 2;
-		    sha.uniform<int>("gNormal") << 0;
 		}
 
 		viewPos = sha.uniform<Eigen::Vector3f>("viewPos");
@@ -286,10 +285,10 @@ struct Deferred
 		GLScope<Shader> x(sha);
 		std::string prefix = "lights[" + std::to_string(index) + "].";
 
-		sha.uniform<Eigen::Vector3f>(prefix + "position") << l.position;
-		sha.uniform<Eigen::Vector3f>(prefix + "color") << l.color;
-		sha.uniform<float>(prefix + "linear") << l.linear;
-		sha.uniform<float>(prefix + "quadratic") << l.quadratic;
+		sha.uniform<Eigen::Vector3f>(prefix + "Position") << l.position;
+		sha.uniform<Eigen::Vector3f>(prefix + "Color") << l.color;
+		sha.uniform<float>(prefix + "Linear") << l.linear;
+		sha.uniform<float>(prefix + "Quadratic") << l.quadratic;
 	}
 
 	void render(Eigen::Matrix4f viewcam)
@@ -297,9 +296,9 @@ struct Deferred
 
         GLScope<VAO> xvao(vao);
         GLScope<Shader> xsha(sha);        
-        GLScope<Texture> t1(trgb,   GL_TEXTURE_2D,1);
+        GLScope<Texture> t1(trgb,   GL_TEXTURE_2D,0);
         GLScope<Texture> t2(tpos,   GL_TEXTURE_2D,2);
-        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,0);
+        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,1);
         viewPos << viewcam.block<3,1>(0,3);
         GLScopeDisable<GL_DEPTH_WRITEMASK> xdw;
         GLScopeDisable<GL_DEPTH_TEST> xdt; // no need to write or read depth
@@ -342,9 +341,9 @@ int main(int argc, char **argv)
 
 	Light l;
 	l.position = Eigen::Vector3f(1.0,1.0,2.0);
-	l.color = Eigen::Vector3f(1.0,1.0,0.0);
-	l.linear = 0.0;
-	l.quadratic = 0.0;
+	l.color = Eigen::Vector3f(0.1,0.1,0.0);
+	l.linear = 0.01;
+	l.quadratic = 0.03;
 	def.setLight(0,l);
 
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
@@ -405,6 +404,8 @@ int main(int argc, char **argv)
 
 		glfwSwapBuffers(*window);
 		glfwPollEvents();
+		if(argc > 2)
+			break;
 	} 
 	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	
@@ -412,9 +413,9 @@ int main(int argc, char **argv)
 	{
 		if(!def.trgb.save("color.png"))
 			std::cout << "failed saveccolor\n";
-		if(!def.tnormal.save("normal.exr"))
+		if(!def.tnormal.save("normal.png"))
 			std::cout << "failed save normal\n";
-		if(!def.tpos.save("pos.exr"))
+		if(!def.tpos.save("pos.png"))
 			std::cout << "failed save tpos\n";
 	}
 	glfwTerminate();
