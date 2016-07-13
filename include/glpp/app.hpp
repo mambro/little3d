@@ -18,6 +18,8 @@ namespace glpp
 	struct XGLFWwindow
 	{
 		GLFWwindow * window = 0;
+		GLSize windowSize;
+		GLSize viewportSize;
 		int innerWidth,innerHeight;
 		int realWidth,realHeight;
 		float devicePixelRatio;
@@ -113,7 +115,8 @@ namespace glpp
 		r.innerWidth = width;
 		r.innerHeight = height;
 		r.innerRatio = width/(float)height;
-		r.realWidth = q[2];
+		r.viewportSize = GLSize(q[2],q[3]);
+		 = q[2];
 		r.realHeight = q[3];
 		std::cout << "app window " << r.innerWidth << "x" << r.innerHeight << " viewport " << q[2] << "x" << q[3] << std::endl; 
 

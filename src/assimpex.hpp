@@ -113,7 +113,7 @@ struct material
 		uM << x.M;
 		uVM << VM;
 		uP << x.P;
-		uN << VM.block<3,3>(0,0).transpose();
+		uN << x.M.block<3,3>(0,0).transpose(); // normal in world space
 		tex.bind(GL_TEXTURE_2D,0);
 	}
 
@@ -170,11 +170,12 @@ struct basicobj
 };
 
 
-inline int assimploader(const char * name, std::vector<std::unique_ptr<basicobj> > & objects, std::shared_ptr<material> & mat)
+inline int assimploader(const char * name, std::vector<std::unique_ptr<basicobj> > & objects, std::shared_ptr<material> & mat, bool donormalize = false)
 {
 
 	Assimp::Importer importer;
-	importer.SetPropertyInteger(AI_CONFIG_PP_PTV_NORMALIZE, 1);
+	if(donormalize)
+		importer.SetPropertyInteger(AI_CONFIG_PP_PTV_NORMALIZE, 1);
 	std::string base = splitpath0(name);
 	const aiScene* scene = importer.ReadFile( name,aiProcess_Triangulate
 		|aiProcess_GenNormals|aiProcess_TransformUVCoords|aiProcess_PreTransformVertices); 

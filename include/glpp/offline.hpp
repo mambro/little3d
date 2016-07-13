@@ -211,8 +211,13 @@ public:
 		{
 			std::cout << "FBO finish with " << db << " colors " << std::endl;
 			fbo.colors_ = db;
-			GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
-			glDrawBuffers(db,DrawBuffers);
+			if(db == 0)
+				glDrawBuffer(GL_NONE);
+			else:
+			{
+				GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
+				glDrawBuffers(db,DrawBuffers);
+			}
 			fbo.checkvalidate();
 			fbo.unbind();
 		}

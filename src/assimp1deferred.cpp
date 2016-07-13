@@ -15,6 +15,7 @@
 
 struct Light {
     Eigen::Vector3f position;
+    Eigen::Vector3f dir;
     Eigen::Vector3f color;
     
     float linear;
@@ -163,6 +164,73 @@ void main()
 }
 );
 
+
+const char * defshadowshaf = GLSL330(
+
+out vec4 FragColor;
+in vec2 TexCoords;
+
+uniform sampler2D gPosition;
+uniform sampler2D gNormal;
+uniform sampler2D gAlbedoSpec;
+uniform vec3 viewPos;
+
+void main()
+{             
+    vec3 FragPos = texture(gPosition,   TexCoords).rgb;
+    vec3 Normal  = texture(gNormal,     TexCoords).rgb; // TODO: optimize decode
+    vec4 DiSpec  = texture(gAlbedoSpec, TexCoords);
+    vec3 Diffuse = DiSpec.rgb;
+    float Specular = DiSpec.a;
+    
+    vec3 lighting  = Diffuse * 0.8; // hard-coded ambient component
+    vec3 viewDir  = normalize(viewPos - FragPos);
+
+    // Then calculate lighting as usual
+
+    // Diffuse
+    vec3 lightDir = normalize(lights[0].Position - FragPos);
+    vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * lights[0].Color;
+    // Specular
+    vec3 halfwayDir = normalize(lightDir + viewDir);  
+    float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
+    vec3 specular = lights[0].Color * spec * Specular;
+    // Attenuation
+    float distance = length(lights[0].Position - FragPos);
+    float attenuation = 1.0 / (1.0 + lights[0].Linear * distance + lights[0].Quadratic * distance * distance);
+    lighting += (diffuse + specular)*attenuation;
+    FragColor = vec4(lighting,1);
+
+}
+);
+
+class DeferredShadow
+{
+public:
+	FBO fbo;
+	DepthTexture tdepth;
+	Shader sha;
+	Shader shaapply;
+	Eigen::Vector3f pos;
+	Eigen::Vector3f dir;
+
+	void init(GLsize size)
+	{
+		tdepth.init(size,false); // float
+		{
+			FBO::Setup s(fbo);
+			s.attach(tdepth);
+		}
+	}
+
+	void capture(std::function<void()> fx)
+	{
+		// adjust the camera aka for uniform corresponding to light pose
+		GLScope<FBO> s(fbo);
+		fx();		
+	}
+};
+
 #if 0
     for(int i = 0; i < NR_LIGHTS; ++i)
     {
@@ -195,9 +263,10 @@ struct Deferred
 	ColorTexture tnormal;
 	ColorTexture tpos;
 	Shader sha;
+	Shader shadowsha;
 	WrappedUniform<Eigen::Vector3f> viewPos;
 
-	Deferred(int width,int height): size_(width,height)
+	Deferred(GLSize s): size_(s)
 	{
 		vao.init();
 		vvbo.init();
@@ -254,7 +323,22 @@ struct Deferred
 		    sha.uniform<int>("gPosition") << 2;
 		}
 
+		{
+//		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
+		    if(!sha.load("deferredshadowv.glsl", "deferredshadowf.glsl",0, 0, 0, true))
+		    {
+		    	std::cout << "failed Deferred shadow shader" << std::endl;
+		    	exit(-1);
+		    }
+		    // link the input uniforms for the textures FOR OUTPUT
+		    GLScope<Shader> ss(shadowsha);
+		    shadowsha.uniform<int>("gAlbedoSpec") << 0;
+		    shadowsha.uniform<int>("gNormal") << 1;
+		    shadowsha.uniform<int>("gPosition") << 2;
+		}
+
 		viewPos = sha.uniform<Eigen::Vector3f>("viewPos");
+		sviewPos = shadowsha.uniform<Eigen::Vector3f>("viewPos");
 
         {
         	const int pos_attrib = 0;
@@ -308,6 +392,14 @@ struct Deferred
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 
+	void capture(std::function<void()> fx)
+	{
+		// adjust the camera aka for uniform corresponding to light pose
+		GLScope<FBO> s(fbo);
+		fx();		
+	}
+
+
 };
 
 int main(int argc, char **argv)
@@ -320,12 +412,21 @@ int main(int argc, char **argv)
 	int width = 640;
 	int height = 480;
 	auto window = glpp::init(width,height,"hello deferred");
-	Deferred def(window->realWidth,window->realHeight);
+	Deferred def(window->viewportSize);
+	DeferredShadow shadow(window->viewportSize);
 	glERR("opengl:after deferred");
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
 	std::shared_ptr<material> mat = std::make_shared<material>();
-	assimploader(argv[1],objects,mat);
+	bool dosave = false;
+	bool donormalize = false;
+	for(int i = 1; i < argc; i++)
+		if(strcmp(argv[i],"--save") == 0)
+			dosave = true;
+		else if(strcmp(argv[i],"--normalize") == 0)
+			donormalize = true;
+		else
+			assimploader(argv[i],objects,mat,donormalize);
 
 
 	{
@@ -340,11 +441,14 @@ int main(int argc, char **argv)
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	Light l;
-	l.position = Eigen::Vector3f(1.0,1.0,2.0);
+	l.dir = Eigen::Vector3f(0,0,-1);
+	l.position = Eigen::Vector3f(0.0,0.0,2.0); // fixed in world coordinates
 	l.color = Eigen::Vector3f(0.1,0.1,0.0);
 	l.linear = 0.01;
 	l.quadratic = 0.03;
 	def.setLight(0,l);
+	shadow.position = l.position;
+	shadow.dir = l.dir;
 
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
@@ -366,7 +470,7 @@ int main(int argc, char **argv)
 	ms.V = View;
 	ms.M = Model;
 	ms.P = Proj;
-	ms.N = (ms.V*ms.M).block<3,3>(0,0).transpose();
+	ms.N = ms.M.block<3,3>(0,0).transpose();
 
 	window->movefx = [&hb] (GLFWwindow *w,double x, double y) 
 	{
@@ -385,18 +489,23 @@ int main(int argc, char **argv)
 			hb.beginDrag(Eigen::Vector2f(p[0],p[1]));
 		}		
 	};	
-	do {
 
-		glERR("opengl:pre defrender");
-		// render to multi target FBO owned by the deferred tool
-		{
-			GLScope<FBO> s(def.fbo);
+	auto fx = [&ms,&hb,&objects] () {
 	        glClearColor(0.0,0.0,0.0,1.0);
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 			ms.M = hb.getTransformation();
 			for(auto & o : objects)
 				o->render(ms);
-		}
+	};
+
+	do {
+
+		glERR("opengl:pre defrender");
+		// render to shadow
+		shadow.capture(fx);
+		// render to main MRT
+		def.capture(fx);
+
 
 		glERR("opengl:pre defrender");
 		def.render(ms.V);
@@ -404,12 +513,12 @@ int main(int argc, char **argv)
 
 		glfwSwapBuffers(*window);
 		glfwPollEvents();
-		if(argc > 2)
+		if(dosave)
 			break;
 	} 
 	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	
-	if(argc > 2)
+	if(dosave)
 	{
 		if(!def.trgb.save("color.png"))
 			std::cout << "failed saveccolor\n";
