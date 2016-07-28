@@ -118,7 +118,7 @@ public:
 
 	void init(Shader & s, const char * name)
 	{
-		uloc = s.uniformLocation(name,true);
+        uloc = s.uniformLocation(name,false);
 	}
 };
 

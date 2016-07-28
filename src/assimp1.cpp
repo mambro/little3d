@@ -21,7 +21,7 @@ const char * meshv = GLSL330(
 	layout(location = 2) in vec3 vertexTexCoords;
 	uniform mat4 m_VM;
 	uniform mat4 m_P;
-	uniform mat3 m_N;
+    uniform mat3 m_NN;
 	uniform vec3 l_pos;
 	out vec3 uv;
 	out vec3 DataIn_normal;
@@ -30,7 +30,7 @@ const char * meshv = GLSL330(
 
 	void main(){
 		vec4 pos = m_VM * vertexPosition_modelspace;
-    	DataIn_normal = normalize(m_N * vertexNormal_modelspace);
+        DataIn_normal = normalize(m_NN * vertexNormal_modelspace);
     	DataIn_lightDir = vec3(l_pos - pos.xyz);
     	DataIn_eye = vec3(-pos);
     	uv = vertexTexCoords;
@@ -94,7 +94,7 @@ struct material
 	{
 		uVM.init(sha,"m_VM");
 		uP.init(sha,"m_P");
-		uN.init(sha,"m_N");
+        uN.init(sha,"m_NN");
 		l_pos.init(sha,"l_pos");
 		diffuse.init(sha,"diffuse");
 		ambient.init(sha,"ambient");
