@@ -167,10 +167,15 @@ public:
 	}
 
 	void bind(GLenum what = GL_FRAMEBUFFER)
-	{
+	{		
 		glBindFramebuffer(what,resource_);
-		GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
-		glDrawBuffers(colors_, DrawBuffers); // "1" is the size of DrawBuffers		
+		if(colors_ == 0)
+			glDrawBuffer(GL_NONE);
+		else
+		{
+			GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
+			glDrawBuffers(colors_,DrawBuffers);
+		}		
 	}
 
 	void unbind(GLenum what= GL_FRAMEBUFFER)
@@ -213,7 +218,7 @@ public:
 			fbo.colors_ = db;
 			if(db == 0)
 				glDrawBuffer(GL_NONE);
-			else:
+			else
 			{
 				GLenum DrawBuffers[4] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1,GL_COLOR_ATTACHMENT2,GL_COLOR_ATTACHMENT3};
 				glDrawBuffers(db,DrawBuffers);

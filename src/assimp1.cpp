@@ -32,8 +32,8 @@ int main(int argc, char **argv)
 	{
 	    if(!mat->sha.load(StandardShader::meshv, StandardShader::meshf, 0, 0, 0, false))
 	    	exit(-1);
-	    GLScope<Shader> ss(mat->sha);
-	    mat->initshader();
+	    GLe<Shader> ss(mat->sha);
+	    ma-t->initshader();
 		glERR("opengl:setup");
 	}
 

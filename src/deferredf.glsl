@@ -5,7 +5,9 @@ in vec2 TexCoords;
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
+uniform sampler2DShadow gAlbedoSpec;
 uniform vec3 viewPos;
+uniform mat4 lightMat;
 
 
 struct Light {
@@ -29,6 +31,12 @@ void main()
     
     vec3 lighting  = Diffuse * 0.8; // hard-coded ambient component
     vec3 viewDir  = normalize(viewPos - FragPos);
+    vec4 ShadowCoord = lightMat * FragPos;
+    float visibility = 1.0;
+    if ( textureProj( shadowMap, ShadowCoord.xyw ).z  <  (ShadowCoord.z-bias)/ShadowCoord.w )
+    {
+        visibility = 0.5;
+    }
 
     // Then calculate lighting as usual
 
@@ -41,7 +49,7 @@ void main()
     vec3 specular = lights[0].Color * spec * Specular;
     // Attenuation
     float distance = length(lights[0].Position - FragPos);
-    float attenuation = 1.0 / (1.0 + lights[0].Linear * distance + lights[0].Quadratic * distance * distance);
+    float attenuation = visibility / (1.0 + lights[0].Linear * distance + lights[0].Quadratic * distance * distance);
     lighting += (diffuse + specular)*attenuation;
     FragColor = vec4( max(dot(Normal, lightDir), 0.0) ,0,0,1);
     FragColor = vec4(lighting,1);

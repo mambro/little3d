@@ -13,6 +13,8 @@
 #include "assimpex.hpp"
 #include "glpp/ArcBall.hpp"
 
+
+
 struct Light {
     Eigen::Vector3f position;
     Eigen::Vector3f dir;
@@ -80,6 +82,8 @@ const char * meshf = GLSL330(
 
 		vec3 n = normalize(DataIn_normal);
 		vec4 o = texture(tex,uv.xy);
+		if(textureSize(tex,0).x == 0)
+			o = vec4(1.0,0,0,1.0);
 		//o += diffuse;
 		//o += vec4(uv,1.0);
 		//color = max(intensity * o + spec, ambient);
@@ -186,7 +190,7 @@ void main()
     vec3 lighting  = Diffuse * 0.8; // hard-coded ambient component
     vec3 viewDir  = normalize(viewPos - FragPos);
 
-    // Then calculate lighting as usual
+	
 
     // Diffuse
     vec3 lightDir = normalize(lights[0].Position - FragPos);
@@ -204,17 +208,36 @@ void main()
 }
 );
 
+// http://www.codinglabs.net/tutorial_opengl_deferred_rendering_shadow_mapping.aspx
+// http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
 class DeferredShadow
 {
 public:
 	FBO fbo;
 	DepthTexture tdepth;
-	Shader sha;
-	Shader shaapply;
-	Eigen::Vector3f pos;
-	Eigen::Vector3f dir;
+	Eigen::Matrix4f view; 	// for the shadow capture as the virtual camera - computed by updateMatrix
+	Eigen::Matrix4f proj; 	// for the shadow capture as the virtual camera - computed by updateMatrix
+	Eigen::Matrix4f lightMat; // for being used inside final pass - computed by updateMatrix
+	GLSize size;
 
-	void init(GLsize size)
+	DeferredShadow(GLSize a) : size(a) {}
+	void updateMatrix(const Light & l)
+	{
+		view = eigen::lookAt(l.position,Eigen::Vector3f(l.position+l.dir),Eigen::Vector3f(0,1,0));
+		proj = eigen::ortho(Eigen::Vector3f(-10,10,-10),Eigen::Vector3f(10,-10,10));
+
+		// converts from the NDC to the texture space
+		Eigen::Matrix4f biasMatrix;
+		biasMatrix <<
+		0.5, 0.0, 0.0, 0.0,
+		0.0, 0.5, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.0,
+		0.5, 0.5, 0.5, 1.0;
+		lightMat = biasMatrix * proj * view;
+
+	}
+
+	void init()
 	{
 		tdepth.init(size,false); // float
 		{
@@ -223,11 +246,11 @@ public:
 		}
 	}
 
-	void capture(std::function<void()> fx)
+	void capture(std::function<void(const Eigen::Matrix4f&p,const Eigen::Matrix4f&v)> fx)
 	{
-		// adjust the camera aka for uniform corresponding to light pose
+		// TODO: alter the matrices to use this CUSTOM view
 		GLScope<FBO> s(fbo);
-		fx();		
+		fx(proj,view);		
 	}
 };
 
@@ -251,26 +274,16 @@ public:
    #endif
 
 
-
-
-struct Deferred
+struct DeferredState
 {
-	VAO vao;
-	VBO<1> vvbo;
 	FBO fbo;
 	GLSize size_;
 	ColorTexture trgb;
 	ColorTexture tnormal;
 	ColorTexture tpos;
-	Shader sha;
-	Shader shadowsha;
-	WrappedUniform<Eigen::Vector3f> viewPos;
 
-	Deferred(GLSize s): size_(s)
+	DeferredState(	GLSize s): size_(s)
 	{
-		vao.init();
-		vvbo.init();
-
 		// prepare textues
 		trgb.init(size_,true,false); 
 		tnormal.init(size_,true,true);
@@ -307,39 +320,19 @@ struct Deferred
 			s.attach(trgb,0);
 			s.attach(tpos,2);
 			s.makedepth();
-		}
+		}	
+	}
+};
 
-		{
-//		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
-		    if(!sha.load("deferredv.glsl", "deferredf.glsl",0, 0, 0, true))
-		    {
-		    	std::cout << "failed Deferred shader" << std::endl;
-		    	exit(-1);
-		    }
-		    // link the input uniforms for the textures FOR OUTPUT
-		    GLScope<Shader> ss(sha);
-		    sha.uniform<int>("gAlbedoSpec") << 0;
-		    sha.uniform<int>("gNormal") << 1;
-		    sha.uniform<int>("gPosition") << 2;
-		}
+struct ViewportGeo
+{
+	VAO vao;
+	VBO<1> vvbo;
 
-		{
-//		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
-		    if(!sha.load("deferredshadowv.glsl", "deferredshadowf.glsl",0, 0, 0, true))
-		    {
-		    	std::cout << "failed Deferred shadow shader" << std::endl;
-		    	exit(-1);
-		    }
-		    // link the input uniforms for the textures FOR OUTPUT
-		    GLScope<Shader> ss(shadowsha);
-		    shadowsha.uniform<int>("gAlbedoSpec") << 0;
-		    shadowsha.uniform<int>("gNormal") << 1;
-		    shadowsha.uniform<int>("gPosition") << 2;
-		}
-
-		viewPos = sha.uniform<Eigen::Vector3f>("viewPos");
-		sviewPos = shadowsha.uniform<Eigen::Vector3f>("viewPos");
-
+	ViewportGeo()
+	{
+		vao.init();
+		vvbo.init();
         {
         	const int pos_attrib = 0;
         	const int tex_attrib = 1;
@@ -359,7 +352,44 @@ struct Deferred
             glEnableVertexAttribArray(tex_attrib);
             glVertexAttribPointer(pos_attrib, 2, GL_FLOAT, GL_FALSE,vertex_size, 0);
             glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE,vertex_size, (void*)texture_offset);
-        }
+        }		
+	}
+};
+
+struct DeferredRenderer
+{
+	ViewportGeo geo;
+	DepthTexture * tshadow = 0;
+	Eigen::Matrix4f proj; 
+	Eigen::Matrix4f view; 
+	Eigen::Matrix4f lightMat;
+	Shader sha;
+	WrappedUniform<Eigen::Vector3f> uviewPos;
+	WrappedUniform<Eigen::Matrix4f> ulightMat;
+
+	DeferredRenderer()
+	{
+
+
+		{
+//		    if(!sha.load(defshav, defshaf, 0, 0, 0, false))
+		    if(!sha.load("deferredv.glsl", "deferredf.glsl",0, 0, 0, true))
+		    {
+		    	std::cout << "failed Deferred shader" << std::endl;
+		    	exit(-1);
+		    }
+		    // link the input uniforms for the textures FOR OUTPUT
+		    GLScope<Shader> ss(sha);
+		    sha.uniform<int>("gAlbedoSpec") << 0;
+		    sha.uniform<int>("gNormal") << 1;
+		    sha.uniform<int>("gPosition") << 2;
+		    sha.uniform<int>("gShadow") << 3;
+		}
+
+		uviewPos = sha.uniform<Eigen::Vector3f>("viewPos");
+		ulightMat = sha.uniform<Eigen::Matrix4f>("lightMat");
+
+
 //            GLScope<VBO<1>> xvbo(tvbo, GL_ELEMENT_ARRAY_BUFFER);
 //            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 	}
@@ -375,15 +405,17 @@ struct Deferred
 		sha.uniform<float>(prefix + "Quadratic") << l.quadratic;
 	}
 
-	void render(Eigen::Matrix4f viewcam)
+	void render(DeferredState & ds)
 	{
 
-        GLScope<VAO> xvao(vao);
-        GLScope<Shader> xsha(sha);        
-        GLScope<Texture> t1(trgb,   GL_TEXTURE_2D,0);
-        GLScope<Texture> t2(tpos,   GL_TEXTURE_2D,2);
-        GLScope<Texture> t3(tnormal,GL_TEXTURE_2D,1);
-        viewPos << viewcam.block<3,1>(0,3);
+        GLScope<VAO> xvao(geo.vao);
+        GLScope<Shader> xsha(sha);  
+        GLScope<Texture> t1(ds.trgb,   GL_TEXTURE_2D,0);
+        GLScope<Texture> t3(ds.tnormal,GL_TEXTURE_2D,1);
+        GLScope<Texture> t2(ds.tpos,   GL_TEXTURE_2D,2);
+        GLScope<Texture> t4(*tshadow,GL_TEXTURE_2D,3);
+    	uviewPos << view.block<3,1>(0,3);
+    	ulightMat << lightMat;
         GLScopeDisable<GL_DEPTH_WRITEMASK> xdw;
         GLScopeDisable<GL_DEPTH_TEST> xdt; // no need to write or read depth
         //glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -392,13 +424,11 @@ struct Deferred
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 
-	void capture(std::function<void()> fx)
+	void capture(DeferredState & ds, std::function<void(const Eigen::Matrix4f&p,const Eigen::Matrix4f&v)> fx)
 	{
-		// adjust the camera aka for uniform corresponding to light pose
-		GLScope<FBO> s(fbo);
-		fx();		
+		GLScope<FBO> s(ds.fbo);
+		fx(proj,view);		
 	}
-
 
 };
 
@@ -412,30 +442,48 @@ int main(int argc, char **argv)
 	int width = 640;
 	int height = 480;
 	auto window = glpp::init(width,height,"hello deferred");
-	Deferred def(window->viewportSize);
+	DeferredState defs(window->viewportSize);
+	DeferredRenderer defr;
 	DeferredShadow shadow(window->viewportSize);
+	defr.tshadow = &shadow.tdepth;
+	shadow.init();
 	glERR("opengl:after deferred");
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
-	std::shared_ptr<material> mat = std::make_shared<material>();
+	std::vector<std::shared_ptr<material> > materials;
 	bool dosave = false;
-	bool donormalize = false;
+	bool donormalize = true;
 	for(int i = 1; i < argc; i++)
 		if(strcmp(argv[i],"--save") == 0)
 			dosave = true;
 		else if(strcmp(argv[i],"--normalize") == 0)
 			donormalize = true;
+		else if(strcmp(argv[i],"--nonormalize") == 0)
+			donormalize = false;
 		else
-			assimploader(argv[i],objects,mat,donormalize);
+			assimploader(argv[i],objects,materials,donormalize);
 
 
+	Eigen::Matrix4f matplane;
+	matplane << 1.0,0.0,0.0,0.0, 
+		0.0,0.0,1.0,0.0,
+		0.0,1.0,0.0,0.0,
+		0.0,0.0,0.0,1.0;
+	//addplane(objects,materials,matplane,Eigen::Vector2f(10,10));
+
+	// ATTACH shader
+	std::shared_ptr<Shader> sha = std::make_shared<Shader>();
+	sha->load(meshv, meshf, 0, 0, 0, false);
+
+	for(auto & it : materials)
 	{
-	    if(!mat->sha.load(meshv, meshf, 0, 0, 0, false))
-	    	exit(-1);
-	    GLScope<Shader> ss(mat->sha);
-	    mat->initshader();
+		it->sha = sha;
+	    GLScope<Shader> ss(*sha);
+		it->initshader();
 		glERR("opengl:setup");
 	}
+
+
 	std::cout << "go...\n";
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -446,9 +494,9 @@ int main(int argc, char **argv)
 	l.color = Eigen::Vector3f(0.1,0.1,0.0);
 	l.linear = 0.01;
 	l.quadratic = 0.03;
-	def.setLight(0,l);
-	shadow.position = l.position;
-	shadow.dir = l.dir;
+	defr.setLight(0,l);
+	shadow.updateMatrix(l);
+	defr.lightMat = shadow.lightMat;
 
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
@@ -464,14 +512,9 @@ int main(int argc, char **argv)
 	std::cout << "Model is\n" <<  Model << std::endl;
 	std::cout << "Matrix is\n" << Proj * View * Model << std::endl;
 
+
+
 	ArcBall hb(Eigen::Vector3f(0,0,0),0.75,window->screenToNDC());
-
-	matrixsetup ms;
-	ms.V = View;
-	ms.M = Model;
-	ms.P = Proj;
-	ms.N = ms.M.block<3,3>(0,0).transpose();
-
 	window->movefx = [&hb] (GLFWwindow *w,double x, double y) 
 	{
 		if(glfwGetMouseButton(w,0) == GLFW_PRESS)
@@ -479,7 +522,6 @@ int main(int argc, char **argv)
 			hb.drag(Eigen::Vector2f(x,y));
 		}
 	};
-
 	window->mousefx = [&hb] (GLFWwindow *w,int button, int action, int mods) 
 	{
 		if(button == 0 && action == GLFW_PRESS)
@@ -490,10 +532,14 @@ int main(int argc, char **argv)
 		}		
 	};	
 
-	auto fx = [&ms,&hb,&objects] () {
+
+	auto fx = [&hb,&objects] (const Eigen::Matrix4f & proj, const Eigen::Matrix4f & view) {
+			matrixsetup ms;
+			ms.V = view;
+			ms.M = hb.getTransformation();
+			ms.P = proj;
 	        glClearColor(0.0,0.0,0.0,1.0);
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-			ms.M = hb.getTransformation();
 			for(auto & o : objects)
 				o->render(ms);
 	};
@@ -503,12 +549,15 @@ int main(int argc, char **argv)
 		glERR("opengl:pre defrender");
 		// render to shadow
 		shadow.capture(fx);
-		// render to main MRT
-		def.capture(fx);
 
+		// prepare deferred
+		defr.view = View;
+		defr.proj = Proj;
+		defr.capture(defs,fx);
 
 		glERR("opengl:pre defrender");
-		def.render(ms.V);
+		defr.lightMat = shadow.lightMat;
+		defr.render(defs);
 		glERR("opengl:after def render");
 
 		glfwSwapBuffers(*window);
@@ -520,11 +569,11 @@ int main(int argc, char **argv)
 	
 	if(dosave)
 	{
-		if(!def.trgb.save("color.png"))
+		if(!defs.trgb.save("color.png"))
 			std::cout << "failed saveccolor\n";
-		if(!def.tnormal.save("normal.png"))
+		if(!defs.tnormal.save("normal.png"))
 			std::cout << "failed save normal\n";
-		if(!def.tpos.save("pos.png"))
+		if(!defs.tpos.save("pos.png"))
 			std::cout << "failed save tpos\n";
 	}
 	glfwTerminate();

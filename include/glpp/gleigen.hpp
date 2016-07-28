@@ -35,11 +35,28 @@ namespace eigen {
 	}
 
 	template<class T>
+	Eigen::Matrix<T,4,4> ortho
+	(
+	    const Eigen::Matrix<T,3,1> lbn,const Eigen::Matrix<T,3,1> rtf
+	)
+	{
+	    typedef Eigen::Matrix<T,4,4> Matrix4;
+	    Eigen::Vector3f t((rtf(0)-lbn(0))/(rtf(0)-lbn(0)),(rtf(1)-lbn(1))/(rtf(1)-lbn(1)),(rtf(2)-lbn(2))/(rtf(2)-lbn(2)));
+
+	    Matrix4 r;
+	    r << 2/(rtf(0)-lbn(0)),0,0,t(0),
+	    	0,2/(rtf(1)-lbn(1)),0,t(1),
+	    	0,0,-2/(rtf(2)-lbn(2)),t(2),
+	    	0,0,0,1;
+	    return r;
+	}
+
+	template<class T>
 	Eigen::Matrix<T,4,4> lookAt
 	(
-	    Eigen::Matrix<T,3,1> const & eye,
-	    Eigen::Matrix<T,3,1> const & center,
-	    Eigen::Matrix<T,3,1> const & up
+	    Eigen::Matrix<T,3,1> eye,
+	    Eigen::Matrix<T,3,1>  center,
+	    Eigen::Matrix<T,3,1>  up
 	)
 	{
 	    typedef Eigen::Matrix<T,4,4> Matrix4;

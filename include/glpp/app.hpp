@@ -15,13 +15,49 @@
 namespace glpp
 {
 
+struct GLSize
+{
+	GLSize() {}
+
+	GLSize(int w, int h) : width(w),height(h) {}
+
+	bool empty() const { return width == 0 && height == 0; }
+
+	bool singular() const { return width == 1 || height == 1; }
+
+	bool operator != (const GLSize & o) const { return !(o == *this); }
+	bool operator == (const GLSize & o) const { return o.width == width && o.height == height; }
+
+	int width = 0,height = 0;
+};
+
+
+
+inline std::ostream & operator << (std::ostream & ons, const GLSize & x)
+{
+	ons << "glsize[" << x.width << " " << x.height << "]";
+	return ons;
+}
+
+
+inline int pow2roundup (int x)
+{
+	int result = 1;
+	while (result < x) result <<= 1;
+	return result;
+}
+
+inline GLSize nextpow2(GLSize sz)
+{
+	return GLSize(pow2roundup(sz.width),pow2roundup(sz.height));
+}
+
 	struct XGLFWwindow
 	{
 		GLFWwindow * window = 0;
 		GLSize windowSize;
 		GLSize viewportSize;
 		int innerWidth,innerHeight;
-		int realWidth,realHeight;
 		float devicePixelRatio;
 		float innerRatio;
 		float ppmm; // pixerl per millimeter
@@ -116,8 +152,6 @@ namespace glpp
 		r.innerHeight = height;
 		r.innerRatio = width/(float)height;
 		r.viewportSize = GLSize(q[2],q[3]);
-		 = q[2];
-		r.realHeight = q[3];
 		std::cout << "app window " << r.innerWidth << "x" << r.innerHeight << " viewport " << q[2] << "x" << q[3] << std::endl; 
 
 		int widthMM, heightMM;

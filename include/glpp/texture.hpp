@@ -365,6 +365,8 @@ public:
 
     operator GLuint () const { return resource_; }
     
+    GLScope<Texture> scope(GLenum mode = GL_TEXTURE_2D, int unit = 0);
+
     // basic full volume GL_R8 GL_UNSIGNED_BYTE
     bool init3d(const uint8_t * data, int xd, int yd, int zd)
     {
@@ -586,6 +588,45 @@ private:
     Sampler(const Sampler&);
     GLuint resource_;
 };
+
+
+/**
+ * Scope for Texture with unit specification
+ */
+template<>
+struct GLScope<Texture>
+{
+    GLScope(const GLScope & copy) = delete;
+
+    GLScope(GLScope && other) : unit_(other.unit_), mode_(other.mode_) {
+        other.mode_ = 0; // disable other
+    }
+
+    GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0) :  unit_(unit), mode_(mode) 
+    { 
+        x.bind(mode,unit);
+    }
+
+    GLScope(GLuint x, GLenum mode = GL_TEXTURE_2D, int unit = 0):   unit_(unit), mode_(mode) { 
+        glActiveTexture(GL_TEXTURE0+unit); 
+        glBindTexture(mode,x); 
+    }
+    ~GLScope() { 
+        if(mode_ != 0)
+        {
+            glActiveTexture(GL_TEXTURE0+unit_);
+            glBindTexture(mode_,0); 
+        }
+    }
+
+    int unit_;
+    GLenum mode_;
+};
+
+inline GLScope<Texture> Texture::scope(GLenum mode, int unit)
+{
+    return GLScope<Texture>(*this, mode,unit);
+}
 
 
 }

@@ -50,12 +50,6 @@ inline bool glERR(const char * name)
 namespace glpp
 {
 
-inline int pow2roundup (int x)
-{
-	int result = 1;
-	while (result < x) result <<= 1;
-	return result;
-}
 
 /// A wrapper for image formats in OpenGL taken from libfreenect2, enhanced with Channels
 template<size_t TBytesPerPixel, GLenum TInternalFormat, GLenum TFormat, GLenum TType, size_t TChannels>
@@ -81,35 +75,22 @@ typedef ImageFormat<4, GL_RGBA, GL_BGRA, GL_UNSIGNED_BYTE,4> F8C4;
 
 
 
-struct GLSize
+/**
+ * Generic Scope
+ */
+template<class T>
+struct GLScope
 {
-	GLSize() {}
+	GLScope(T & x, GLenum mode): x_(x),mode_(mode) { x.bind(mode); }
 
-	GLSize(int w, int h) : width(w),height(h) {}
+	~GLScope() { x_.unbind(mode_); }
 
-	bool empty() const { return width == 0 && height == 0; }
-
-	bool singular() const { return width == 1 || height == 1; }
-
-	bool operator != (const GLSize & o) const { return !(o == *this); }
-	bool operator == (const GLSize & o) const { return o.width == width && o.height == height; }
-
-	int width = 0,height = 0;
+	T & x_;
+	GLenum mode_;
 };
 
-inline std::ostream & operator << (std::ostream & ons, const GLSize & x)
-{
-	ons << "glsize[" << x.width << " " << x.height << "]";
-	return ons;
 }
 
-inline GLSize nextpow2(GLSize sz)
-{
-	return GLSize(pow2roundup(sz.width),pow2roundup(sz.height));
-}
-
-
-}
 
 #include "texture.hpp"
 #include "offline.hpp"
@@ -445,19 +426,6 @@ private:
 // Scope Based Tools
 //----------------------------------------------------------------------------
 
-/**
- * Generic Scope
- */
-template<class T>
-struct GLScope
-{
-	GLScope(T & x, GLenum mode): x_(x),mode_(mode) { x.bind(mode); }
-
-	~GLScope() { x_.unbind(mode_); }
-
-	T & x_;
-	GLenum mode_;
-};
 
 /**
  * Scoped Viewport with automatic reset
@@ -582,30 +550,6 @@ struct GLScopeDisable<GL_COLOR_WRITEMASK>
 {
 	GLScopeDisable() { glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE); }
 	~GLScopeDisable() { glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE); }
-};
-
-/**
- * Scope for Texture with unit specification
- */
-template<>
-struct GLScope<Texture>
-{
-	GLScope(Texture & x, GLenum mode = GL_TEXTURE_2D, int unit = 0) :  unit_(unit), mode_(mode) 
-	{ 
-		x.bind(mode,unit);
-	}
-
-	GLScope(GLuint x, GLenum mode = GL_TEXTURE_2D, int unit = 0):   unit_(unit), mode_(mode) { 
-		glActiveTexture(GL_TEXTURE0+unit); 
-		glBindTexture(mode,x); 
-	}
-	~GLScope() { 
-		glActiveTexture(GL_TEXTURE0+unit_);
-		glBindTexture(mode_,0); 
-	}
-
-	int unit_;
-	GLenum mode_;
 };
 
 /// Scope for sampler
