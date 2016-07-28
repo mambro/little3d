@@ -12,7 +12,6 @@
 
 using namespace glpp;
 
-
 int main(int argc, char **argv)
 {
 	if(argc != 2)
@@ -26,14 +25,15 @@ int main(int argc, char **argv)
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
 	std::shared_ptr<material> mat = std::make_shared<material>();
-	assimploader(argv[1],objects,mat);
+	std::vector<std::shared_ptr<material> > mats = {mat};
+	assimploader(argv[1],objects,mats);
 
 	// custom shader
 	{
-	    if(!mat->sha.load(StandardShader::meshv, StandardShader::meshf, 0, 0, 0, false))
+	    if(!mat->sha->load(StandardShader::meshv, StandardShader::meshf, 0, 0, 0, false))
 	    	exit(-1);
-	    GLe<Shader> ss(mat->sha);
-	    ma-t->initshader();
+	    GLScope<Shader> ss(*mat->sha.get());
+	    mat->initshader();
 		glERR("opengl:setup");
 	}
 

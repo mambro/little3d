@@ -156,6 +156,7 @@ public:
     void renderStep(Texture & input, bool flip)
     {
         GLScopeDisable<GL_DEPTH_WRITEMASK> xdepth;
+        GLScopeDisable<GL_DEPTH_TEST> xdeepth;
         GLScope<Texture> xtex(input);
         GLScope<VAO> xvao(vao_);
         GLScope<Shader> xsha(shader_);

@@ -282,7 +282,7 @@ public:
     }
     bool load(const std::string &path)
     {
-        COCO_LOG(2) << "Loading texture file " <<  path.c_str();
+        COCO_LOG(2) << "Loading texture file " <<  path.c_str() << std::endl;
         unsigned char* img = SOIL_load_image(path.c_str(), &size_.width,
                                              &size_.height, &channels_, 0);
         type_ = GL_UNSIGNED_BYTE;
@@ -291,6 +291,7 @@ public:
             COCO_ERR() << "Failed to load texture image\n";
             return false;
         }
+        COCO_LOG(2) << "\tLoaded " << size_.width << " " << size_.height << " channels " << channels_ << std::endl;
         //int img_lenght = size_.width * size_.height * channels_ * sizeof(u_int8_t);
         switch(channels_)
         {
@@ -301,12 +302,18 @@ public:
         if(!resource_)            
             glGenTextures(1, &resource_);
         glBindTexture(GL_TEXTURE_2D, resource_);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, format_, size_.width, size_.height,
                      0, format_, type_, img);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        GLint w, h;
+int miplevel = 0;
+glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_WIDTH, &w);
+glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_HEIGHT, &h);
+    std::cout << "\teffective size " << w << " " << h << std::endl;
         glBindTexture(GL_TEXTURE_2D, 0);
         SOIL_free_image_data(img);
         return true;
