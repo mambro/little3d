@@ -87,10 +87,10 @@ struct material
 {
 	void initshader()
 	{
-		uM.init(*sha,"m_M");
-		uVM.init(*sha,"m_VM");
-		uP.init(*sha,"m_P");
-		uN.init(*sha,"m_N");
+		uM.init(*sha,"m_M",false);
+		uVM.init(*sha,"m_VM",false);
+		uP.init(*sha,"m_P",false);
+		uN.init(*sha,"m_N",false);
 		l_pos.init(*sha,"l_pos"); // TBR
 		udiffuse.init(*sha,"diffuse",false);
 		ambient.init(*sha,"ambient",false);

@@ -24,12 +24,14 @@ int main(int argc, char **argv)
 	auto window = glpp::init(width,height);
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
-	std::shared_ptr<material> mat = std::make_shared<material>();
-	std::vector<std::shared_ptr<material> > mats = {mat};
+	std::vector<std::shared_ptr<material> > mats;
 	assimploader(argv[1],objects,mats);
 
 	// custom shader
+	for(int i = 0; i < mats.size(); i++)
 	{
+		auto& mat = mats[i];
+		mat->sha = std::make_shared<Shader>();
 	    if(!mat->sha->load(StandardShader::meshv, StandardShader::meshf, 0, 0, 0, false))
 	    	exit(-1);
 	    GLScope<Shader> ss(*mat->sha.get());
@@ -91,3 +93,5 @@ int main(int argc, char **argv)
 	while( glfwGetKey(*window, GLFW_KEY_ESCAPE ) != GLFW_PRESS && glfwWindowShouldClose(*window) == 0 );
 	glfwTerminate();
 }
+
+

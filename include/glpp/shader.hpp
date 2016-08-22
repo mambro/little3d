@@ -58,6 +58,7 @@ public:
 	{
 		if(resource_)
 		{
+			std::cout << "releasing " << resource_ << std::endl;
 			glDeleteProgram(resource_);
 			resource_ = 0;
 		}

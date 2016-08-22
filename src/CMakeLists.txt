@@ -16,6 +16,9 @@ add_executable(showimage showimage.cpp)
 add_executable(assimp1 assimp1.cpp)
 target_link_libraries(assimp1 p::assimp)
 
+add_executable(assimp1ar assimp1ar.cpp)
+target_link_libraries(assimp1ar p::assimp)
+
 add_executable(assimp1capture assimp1capture.cpp)
 target_link_libraries(assimp1capture SOIL p::assimp)
 
