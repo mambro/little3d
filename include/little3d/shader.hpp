@@ -20,11 +20,11 @@
 #else
 #define BOOST_LOG_TRIVIAL(x) std::cout
 #endif
-#include "glpp/ioutils.hpp"
+#include "little3d/ioutils.hpp"
 #include <Eigen/Dense>
 
 
-namespace glpp
+namespace little3d
 {
 template <class T>
 class WrappedUniform

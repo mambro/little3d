@@ -1,19 +1,15 @@
 
-#include "glpp/app.hpp"
-#include "glpp/draw.hpp"
-#include "glpp/gleigen.hpp"
-#include "glpp/imageproc.hpp"
-#include "glpp/offline.hpp"
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
-#include <Eigen/Geometry>
 #include <iostream>
-#include "glpp/ArcBall.hpp"
-#include "assimpex.hpp"
-#include "glpp/arcamera.hpp"
+#include "little3d/app.hpp"
+#include "little3d/base.hpp"
+#include "little3d/gleigen.hpp"
+#include "little3d/imageproc.hpp"
+#include "little3d/fbo.hpp"
+#include "little3d/arcball.hpp"
+#include "little3d/assimpex.hpp"
+#include "little3d/arcamera.hpp"
 
-using namespace glpp;
+using namespace little3d;
 
 int main(int argc, char **argv)
 {
@@ -25,7 +21,7 @@ int main(int argc, char **argv)
 	bool capturemode = true;
 	int width = 640;
 	int height = 480;
-	auto window = glpp::init(width,height);
+	auto window = little3d::init(width,height);
 
 	std::vector<std::unique_ptr<basicobj> >  objects;
 	std::vector<std::shared_ptr<material> > mats;

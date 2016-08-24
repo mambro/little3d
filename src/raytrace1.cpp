@@ -1,9 +1,9 @@
 // See https://www.shadertoy.com/view/4sj3WK
-#include "glpp/app.hpp"
-#include "glpp/draw.hpp"
+#include "little3d/app.hpp"
+#include "little3d/draw.hpp"
 #include <iostream>
 
-using namespace glpp;
+using namespace little3d;
 
 struct tbox
 {
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 {
 	int width = 640;
 	int height = 480;
-	auto window = glpp::init(width,height);
+	auto window = little3d::init(width,height);
 		glERR("opengl:after init");
 
 	VBO<1> vvbo;

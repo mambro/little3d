@@ -1,7 +1,9 @@
 #pragma once
 
+#include "little3d/texture.hpp"
+
 // Capture texture as offline in FBO
-namespace glpp {
+namespace little3d {
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -335,4 +337,21 @@ private:
 	GLuint rboDepthStencil_ = 0,rboColor_ = 0;
 	int colors_ = 0;
 };
+
+	/**
+	 * Scope for FBO == glBindFramebuffer + viewport
+	 */
+	template<>
+	struct GLScope<FBO>
+	{	
+		GLScope(FBO & x, GLenum mode = GL_FRAMEBUFFER) : _view(x.size()), _mode(mode) 
+		{ 
+			x.bind(mode); 
+		}
+		~GLScope() { glBindFramebuffer(_mode,0); }
+		operator bool() { return true; }
+		GLViewportScope _view;
+		GLenum _mode;
+	};
+
 }

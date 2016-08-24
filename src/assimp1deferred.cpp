@@ -2,16 +2,16 @@
 // http://learnopengl.com/#!Advanced-Lighting/Deferred-Shading
 // http://www.ogldev.org/www/tutorial36/tutorial36.html
 // http://gamedevs.org/uploads/deferred-shading-tutorial.pdf
-#include "glpp/app.hpp"
-#include "glpp/draw.hpp"
-#include "glpp/gleigen.hpp"
+#include "little3d/app.hpp"
+#include "little3d/draw.hpp"
+#include "little3d/gleigen.hpp"
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 #include <Eigen/Geometry>
 #include <iostream>
-#include "assimpex.hpp"
-#include "glpp/ArcBall.hpp"
+#include "little3d/assimpex.hpp"
+#include "little3d/arcball.hpp"
 
 
 
@@ -25,7 +25,7 @@ struct Light {
 };
 
 
-using namespace glpp;
+using namespace little3d;
 
 	const char * meshv = GLSL330(
 		layout(location = 0) in vec3 vertexPosition_modelspace;
@@ -441,7 +441,7 @@ int main(int argc, char **argv)
 	}
 	int width = 640;
 	int height = 480;
-	auto window = glpp::init(width,height,"hello deferred");
+	auto window = little3d::init(width,height,"hello deferred");
 	DeferredState defs(window->viewportSize);
 	DeferredRenderer defr;
 	DeferredShadow shadow(window->viewportSize);
@@ -499,12 +499,12 @@ int main(int argc, char **argv)
 	defr.lightMat = shadow.lightMat;
 
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
-	auto Proj = glpp::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
+	auto Proj = little3d::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
 	    0.1f,        // Near clipping plane. Keep as big as possible, or you'll get precision issues.
 	    300.0f       // Far clipping plane. Keep as little as possible.
 	);
-	auto View      = glpp::eigen::lookAt<float>({0,2,2},{0,0,0},{0,1,0});
+	auto View      = little3d::eigen::lookAt<float>({0,2,2},{0,0,0},{0,1,0});
 	Eigen::Matrix4f Model = Eigen::Matrix4f::Identity();
 	Model.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
 	std::cout << "Proj is\n" << Proj  << std::endl;

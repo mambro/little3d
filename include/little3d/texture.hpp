@@ -1,14 +1,18 @@
+#pragma once
+
 #include "SOIL/SOIL.h"
 #include "stb_image_write.h"
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr.h"
 #include "lodepng.h"
+#include "little3d/base.hpp"
 #ifndef COCO_FATAL
 #define COCO_ERR() std::cout
 #define COCO_FATAL() std::cout
 #define COCO_LOG(x) std::cout
 #endif
-namespace glpp
+
+namespace little3d
 {
 
 #if 0
@@ -634,6 +638,65 @@ inline GLScope<Texture> Texture::scope(GLenum mode, int unit)
 {
     return GLScope<Texture>(*this, mode,unit);
 }
+
+    inline bool Texture::init3d(const uint8_t * data, int nbytes, const std::array<int,3> &xsize, const std::array<int,3>  &extent, bool rgba,bool isfloat, bool clampme, bool interp)
+    {
+        release();
+        glGenTextures(1, &resource_);
+
+        GLScope<Texture> ss(*this,GL_TEXTURE_3D);
+        glERR("opengl:init3dpre bound");
+        bool samesize = xsize == extent;
+        GLenum type =  isfloat ? GL_FLOAT : rgba ? GL_UNSIGNED_INT_8_8_8_8_REV : GL_UNSIGNED_BYTE;
+#ifndef USE_EGL
+         GLenum internalformat = (rgba? (isfloat?GL_RGBA32F:GL_RGBA8): (isfloat? GL_R32F:GL_R8));
+#else
+        if(isfloat || !rgba)
+            return false;
+         GLenum internalformat = GL_RGBA8;
+#endif
+        glERR("opengl:init3dpre");
+           glTexImage3D(GL_TEXTURE_3D,0,
+                // internalformat
+                internalformat,
+                xsize[0],xsize[1],xsize[2],
+                0, // border
+                rgba ? GL_RGBA:GL_RED, // ignored
+                type, // ignored
+                samesize ? data : 0);
+        if(!glERR("opengl:init3dpre glTexImage3D"))
+            return false;
+        if(!samesize)
+        {
+           glTexSubImage3D(GL_TEXTURE_3D,0,
+                0,0,0, // origin
+                extent[0],extent[1],extent[2], // extent
+                rgba ? GL_RGBA:GL_RED,
+                type,
+                data);
+            if(!glERR("opengl:init3dpre glTexSubImage3D"))
+            return false;
+        }
+           // set the texture parameters
+           glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, clampme ? GL_CLAMP_TO_BORDER: GL_REPEAT);
+           glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, clampme ?  GL_CLAMP_TO_BORDER: GL_REPEAT);
+           glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R,  clampme ? GL_CLAMP_TO_BORDER : GL_REPEAT);
+           glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, interp?GL_LINEAR:GL_NEAREST);
+           glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, interp?GL_LINEAR:GL_NEAREST);
+        std::cout << "new tex3d size:" <<  xsize << " initedas:" << extent << " rgba:" << rgba << " float:" << isfloat << " clamp:" << clampme << " interp:"<< interp << std::endl;
+        return true;
+    }
+
+
+    /// Scope for sampler
+    template<>
+    struct GLScope<Sampler>
+    {
+        GLScope(Sampler & x,  int unit = 0):  unit_(unit) { x.bind(unit);}
+        ~GLScope() { glBindSampler(unit_,0); }
+
+        int unit_;
+    };
 
 
 }

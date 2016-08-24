@@ -1,10 +1,10 @@
-#include "glpp/app.hpp"
-#include "glpp/draw.hpp"
-#include "glpp/gleigen.hpp"
+#include "little3d/app.hpp"
+#include "little3d/draw.hpp"
+#include "little3d/gleigen.hpp"
 #include <Eigen/Geometry>
 #include <iostream>
 
-using namespace glpp;
+using namespace little3d;
 
 const float SQUARE[] = {
     -1.0f,  1.0f,
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	float angle = 0.0;
 	int width = 640;
 	int height = 480;
-	auto window = glpp::init(width,height);
+	auto window = little3d::init(width,height);
 		glERR("opengl:after init");
 
 
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	Like the deprecated gluPerspective function
 	*/
 	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
-	auto Proj = glpp::eigen::perspective<float>(60.0f,  // The horizontal Field of View, in degrees : the amount of "zoom". 
+	auto Proj = little3d::eigen::perspective<float>(60.0f,  // The horizontal Field of View, in degrees : the amount of "zoom". 
 														//Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
 	    0.1f,        // Near clipping plane. Keep as big as possible, or you'll get precision issues.
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 	   As UP and AT define a plane, we can construct an orthogonal vector to AT in the camera space.
 	*/
 
-	auto View      = glpp::eigen::lookAt<float>({0,2,20},{0,0,0},{0,1,0});
+	auto View      = little3d::eigen::lookAt<float>({0,2,20},{0,0,0},{0,1,0});
 
 	Eigen::Matrix4f Model = Eigen::Matrix4f::Identity();
 	Model.block<3,3>(0,0) = 10*Eigen::Matrix3f::Identity();

@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace glpp
+namespace little3d
 {
 	enum class BT { ARRAY = GL_ARRAY_BUFFER, ELEMENT = GL_ELEMENT_ARRAY_BUFFER }; 
 	enum class TT { T2D = GL_TEXTURE_2D, T3D = GL_TEXTURE_3D }; 

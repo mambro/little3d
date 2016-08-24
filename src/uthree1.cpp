@@ -1,13 +1,13 @@
-#include "glpp/uthree.hpp"
+#include "little3d/uthree.hpp"
 
-using glpp::three;
+using little3d::three;
 
 int main(int argc, char const *argv[])
 {
 	float angle = 0.0;
 	int width = 640;
 	int height = 480;
-	auto window = glpp::init(width,height);
+	auto window = little3d::init(width,height);
 
 	auto scene = new Scene();
 	auto camera = new PerspectiveCamera( 70, window.innerRatio, 1, 1000 );

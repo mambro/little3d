@@ -21,7 +21,7 @@
  * Output: xvimagesink osxvideosink
  * Split: 
  */
-#include "glpp/draw.hpp"
+#include "little3d/draw.hpp"
 #include <gst/gst.h> 
 #include <gst/app/gstappsink.h>
 #include <glib.h>

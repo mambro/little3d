@@ -17,7 +17,7 @@ std::istream & readbin(std::istream & is, std::vector<T> & r, int n)
 	return is;
 }
 
-namespace glpp
+namespace little3d
 {
 template<class T,unsigned long N>
 std::ostream & operator<<(std::ostream & os, const std::array<T,N> & p)

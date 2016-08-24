@@ -8,7 +8,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
-namespace glpp {
+namespace little3d {
 
 /// A reimplementation of Ken Shoemake's arcball camera. SCIRun 4's camera
 /// system is based off of Ken's code. The Code appears in Graphics Gems 4, 

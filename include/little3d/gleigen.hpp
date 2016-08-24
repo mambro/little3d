@@ -2,7 +2,7 @@
 #include <Eigen/Core>
 #include <math.h>
 
-namespace glpp
+namespace little3d
 {
 namespace eigen {
 	// http://spointeau.blogspot.it/2013/12/hello-i-am-looking-at-opengl-3.html

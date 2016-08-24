@@ -1,11 +1,11 @@
-#include "glpp/app.hpp"
-#include "glpp/draw.hpp"
-#include "glpp/gleigen.hpp"
-#include "glpp/imageproc.hpp"
+#include "little3d/app.hpp"
+#include "little3d/draw.hpp"
+#include "little3d/gleigen.hpp"
+#include "little3d/imageproc.hpp"
 #include <Eigen/Geometry>
 #include <iostream>
 
-using namespace glpp;
+using namespace little3d;
 #define COCO_ERR() std::cout
 float angle = 0;
 

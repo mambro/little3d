@@ -1,8 +1,8 @@
-#include "glpp/app.hpp"
+#include "little3d/app.hpp"
 
 int main(int argc, char const *argv[])
 {
-	auto window = glpp::init(640,480,"Hello");
+	auto window = little3d::init(640,480,"Hello");
 	if(!window)
 		return 0;
 

@@ -1,8 +1,8 @@
 // TODO: decide if OpenGL stays local in DOM or not
 
-#include "glpp/uthree.hpp"
+#include "little3d/uthree.hpp"
 
-namespace glpp {
+namespace little3d {
 	namespace three {
 
 		/// down invalidate (TODO: optimize)

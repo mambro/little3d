@@ -8,6 +8,7 @@ struct CameraIntrinsics
 	int width=0,height=0;
 
 	void fromK(Eigen::Matrix3f K);
+	
 	Eigen::Matrix3f getK() const;
 	Eigen::Matrix4f getK4(float near, float far) const;
 

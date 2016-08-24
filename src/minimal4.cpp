@@ -1,8 +1,8 @@
-#include "glpp/app.hpp"
-#include "glpp/draw.hpp"
+#include "little3d/app.hpp"
+#include "little3d/draw.hpp"
 #include <iostream>
 
-using namespace glpp;
+using namespace little3d;
 
 const float SQUARE[] = {
     -1.0f,  1.0f,
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	float angle = 0.0;
 	int width = 640;
 	int height = 480;
-	auto window = glpp::init(width,height);
+	auto window = little3d::init(width,height);
 		glERR("opengl:after init");
 
 	VBO<1> vvbo;

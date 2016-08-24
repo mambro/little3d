@@ -11,46 +11,12 @@
 #include <Eigen/Dense>
 #include <functional>
 #include <iostream>
+#include "little3d/base.hpp"
 
-namespace glpp
+namespace little3d
 {
 
-struct GLSize
-{
-	GLSize() {}
 
-	GLSize(int w, int h) : width(w),height(h) {}
-
-	bool empty() const { return width == 0 && height == 0; }
-
-	bool singular() const { return width == 1 || height == 1; }
-
-	bool operator != (const GLSize & o) const { return !(o == *this); }
-	bool operator == (const GLSize & o) const { return o.width == width && o.height == height; }
-
-	int width = 0,height = 0;
-};
-
-
-
-inline std::ostream & operator << (std::ostream & ons, const GLSize & x)
-{
-	ons << "glsize[" << x.width << " " << x.height << "]";
-	return ons;
-}
-
-
-inline int pow2roundup (int x)
-{
-	int result = 1;
-	while (result < x) result <<= 1;
-	return result;
-}
-
-inline GLSize nextpow2(GLSize sz)
-{
-	return GLSize(pow2roundup(sz.width),pow2roundup(sz.height));
-}
 
 	struct XGLFWwindow
 	{

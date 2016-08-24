@@ -1,6 +1,14 @@
 #pragma once
 
-namespace glpp
+#include "little3d/base.hpp"
+#include "little3d/shader.hpp"
+#include "little3d/texture.hpp"
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/scene.h>           // Output data structure
+#include <assimp/postprocess.h>     // Post processing flags
+#include <Eigen/Geometry>
+
+namespace little3d
 {
 
 inline std::string splitpath0(std::string w)
