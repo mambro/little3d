@@ -43,6 +43,9 @@ public:
   /// \param mouseScreenCoords  Mouse screen coordinates.
   void drag(const Eigen::Vector2f& mouseScreenCoords);
 
+  template <class T>
+  void attach(T); // attach to window
+
   /// Retrieves the current transformation in TCS.
   /// Obtains full transformation of object in question. If the arc ball is 
   /// being used to control camera rotation, then this will contain all
@@ -147,6 +150,28 @@ inline void ArcBall::drag(const Eigen::Vector2f& msc)
   mMatNow.block<3,3>(0,0) = mQNow.inverse().matrix();
 }
 
+template<class W>
+inline void ArcBall::attach(W window)
+{
+
+  // move this setup
+  window->movefx = [this] (GLFWwindow *w,double x, double y) 
+  {
+    if(glfwGetMouseButton(w,0) == GLFW_PRESS)
+    {
+      this->drag(Eigen::Vector2f(x,y));
+    }
+  };
+  window->mousefx = [this] (GLFWwindow *w,int button, int action, int mods) 
+  {
+    if(button == 0 && action == GLFW_PRESS)
+    {
+      double p[2];
+      glfwGetCursorPos(w,&p[0],&p[1]); // make helper
+      this->beginDrag(Eigen::Vector2f(p[0],p[1]));
+    }   
+  };  
+}
 
 } // namespace CPM_ARC_BALL_NS 
 

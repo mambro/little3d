@@ -21,6 +21,7 @@
 #define BOOST_LOG_TRIVIAL(x) std::cout
 #endif
 #include "little3d/ioutils.hpp"
+#include "little3d/base.hpp"
 #include <Eigen/Dense>
 
 
@@ -38,6 +39,8 @@ public:
 class Shader
 {
 public:
+	enum LoadSource { FromFile, FromString};
+
 	class ShaderException : public std::exception 
 	{
 
@@ -49,6 +52,11 @@ public:
 		return resource_;
 	}
 
+	Shader(LoadSource s,const char * vertex_file_path,const char * fragment_file_path,const char * geo_file_path=0)
+	{
+		load(vertex_file_path,fragment_file_path,geo_file_path,0,0,s == FromFile);
+	}
+
 	~Shader()
 	{
 		release();
@@ -58,7 +66,6 @@ public:
 	{
 		if(resource_)
 		{
-			std::cout << "releasing " << resource_ << std::endl;
 			glDeleteProgram(resource_);
 			resource_ = 0;
 		}
@@ -388,5 +395,15 @@ inline bool Shader::load(const char * vertex_file_path,const char * fragment_fil
 	resource_ = programID;
 	return true;
 }
+
+	/**
+	 * Scope for Shader == glUseProgram
+	 */
+	template<>
+	struct GLScope<Shader>
+	{
+		GLScope(Shader & x) { x.bind(); }
+		~GLScope() { glUseProgram(0); }
+	};
 
 }

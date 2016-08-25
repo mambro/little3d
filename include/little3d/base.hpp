@@ -22,9 +22,10 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <array>
+
 #include "little3d/strictgl.hpp"
 #include "little3d/ioutils.hpp"
-#include "little3d/shader.hpp"
 #ifdef BOOST_LOG
 #include <boost/log/trivial.hpp>
 #else
@@ -50,6 +51,23 @@ inline bool glERR(const char * name)
 namespace little3d
 {
 
+
+
+struct GLSize
+{
+	GLSize() {}
+
+	GLSize(int w, int h) : width(w),height(h) {}
+
+	bool empty() const { return width == 0 && height == 0; }
+
+	bool singular() const { return width == 1 || height == 1; }
+
+	bool operator != (const GLSize & o) const { return !(o == *this); }
+	bool operator == (const GLSize & o) const { return o.width == width && o.height == height; }
+
+	int width = 0,height = 0;
+};
 
 /// A wrapper for image formats in OpenGL taken from libfreenect2, enhanced with Channels
 template<size_t TBytesPerPixel, GLenum TInternalFormat, GLenum TFormat, GLenum TType, size_t TChannels>
@@ -106,8 +124,15 @@ struct GLScope
 			release();
 		}
 
+		Query()
+		{
+			init();
+		}
+
 		void init()
 		{
+			if(resource_)
+				release();
 			GLuint query;
 			glGenQueries(1, &resource_);
 		}
@@ -152,7 +177,7 @@ struct GLScope
 	class VBO
 	{
 	public:
-		VBO() { }
+		VBO() { init(); }
 
 		void init()
 		{
@@ -206,7 +231,7 @@ struct GLScope
 	class VBO<1>
 	{
 	public:
-		VBO(): resource_(0) {  }
+		VBO(): resource_(0) {  init(); }
 
 		void init()
 		{
@@ -276,7 +301,7 @@ struct GLScope
 	public:
 		DualPBO(): index(0)
 		{
-
+			init(); 
 		}
 
 		void init()
@@ -319,6 +344,7 @@ struct GLScope
 		MultiPBOFenced(): index(0)
 		{
 			memset(fences,0,sizeof(fences));	
+			init();
 		}
 
 		void init()
@@ -377,7 +403,7 @@ struct GLScope
 	class VAO
 	{
 	public:
-		VAO(): resource_(0) {}
+		VAO(): resource_(0) { init(); }
 
 		void init()
 		{
@@ -446,15 +472,6 @@ struct GLScope
 		GLint view[4];
 	};
 
-	/**
-	 * Scope for Shader == glUseProgram
-	 */
-	template<>
-	struct GLScope<Shader>
-	{
-		GLScope(Shader & x) { x.bind(); }
-		~GLScope() { glUseProgram(0); }
-	};
 
 	/**
 	 * Scope for VAO == glBindVertexArray
@@ -476,6 +493,19 @@ struct GLScope
 	{
 		GLScope(VBO<n> & x, GLenum mode = GL_ARRAY_BUFFER, int unit = 0) : mode_(mode) { x.bind(mode,unit); }
 		~GLScope() { glBindBuffer(mode_,0); }
+
+		template <class T,unsigned long N>
+		void set(const std::array<T,N> & w)
+		{
+			glBufferData(GL_ARRAY_BUFFER, w.size()*sizeof(T),w.data(),GL_STATIC_DRAW);
+		}
+
+		template <class T>
+		void set(const std::vector<T> & w)
+		{
+			glBufferData(GL_ARRAY_BUFFER, w.size()*sizeof(T),&w[0],GL_STATIC_DRAW);
+		}
+
 		GLenum mode_;
 	};
 
@@ -487,6 +517,20 @@ struct GLScope
 	{
 		GLScope(VBO<1> & x, GLenum mode = GL_ARRAY_BUFFER): mode_(mode) { x.bind(mode); }
 		~GLScope() { glBindBuffer(mode_,0); }
+
+		template <class T,unsigned long N>
+		void set(const std::array<T,N> & w)
+		{
+			glBufferData(GL_ARRAY_BUFFER, w.size()*sizeof(T),w.data(),GL_STATIC_DRAW);
+		}
+
+		template <class T>
+		void set(const std::vector<T> & w)
+		{
+			glBufferData(GL_ARRAY_BUFFER, w.size()*sizeof(T),&w[0],GL_STATIC_DRAW);
+		}
+
+
 		GLenum mode_;
 	};
 
@@ -549,23 +593,6 @@ struct GLScope
 		glEnable(GL_CULL_FACE);
 		glFrontFace(GL_CW);	
 	}
-
-struct GLSize
-{
-	GLSize() {}
-
-	GLSize(int w, int h) : width(w),height(h) {}
-
-	bool empty() const { return width == 0 && height == 0; }
-
-	bool singular() const { return width == 1 || height == 1; }
-
-	bool operator != (const GLSize & o) const { return !(o == *this); }
-	bool operator == (const GLSize & o) const { return o.width == width && o.height == height; }
-
-	int width = 0,height = 0;
-};
-
 
 
 inline std::ostream & operator << (std::ostream & ons, const GLSize & x)

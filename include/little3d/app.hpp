@@ -1,4 +1,9 @@
 #pragma once
+#include <memory>
+#include <Eigen/Dense>
+#include <functional>
+#include <iostream>
+
 #ifdef USE_EGL
 #define GL_GLEXT_PROTOTYPES
 #include "EGL/egl.h"
@@ -7,16 +12,10 @@
 #include <glew.h>
 #endif
 #include <GLFW/glfw3.h>
-#include <memory>
-#include <Eigen/Dense>
-#include <functional>
-#include <iostream>
 #include "little3d/base.hpp"
 
 namespace little3d
 {
-
-
 
 	struct XGLFWwindow
 	{
@@ -57,6 +56,11 @@ namespace little3d
 					if(p->movefx)
 						p->movefx(window,x,y);
 			});
+		}
+
+		void clear()
+		{
+			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);			
 		}
 
 	};
