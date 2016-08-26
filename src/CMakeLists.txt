@@ -11,6 +11,8 @@ add_executable(simplequad simplequad.cpp)
 
 add_executable(simplecube simplecube.cpp)
 
+add_executable(aroverlay aroverlay.cpp)
+
 #add_executable(raytrace1 raytrace1.cpp)
 
 #add_executable(showimage showimage.cpp)

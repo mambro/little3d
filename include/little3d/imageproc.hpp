@@ -10,6 +10,9 @@ namespace little3d
     class GLImageProc
     {
     public:
+        GLImageProc() { init(); }
+
+        GLImageProc(const char * vert, const char * frag) { init(vert,frag);}
     	/**
     	 * Deals with given width and height
     	 * Inputreduced means that the input image is placed inside a pow2 texture and processing should be limited to that

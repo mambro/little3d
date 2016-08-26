@@ -75,5 +75,17 @@ namespace eigen {
 
 	    return res;
 	}
+
+	template<class T>
+	Eigen::Matrix<T,4,4> pose2camera(Eigen::Matrix<T,4,4> pose)
+	{
+	//	Eigen::Matrix<T,4,4> q = pose.inverse();
+		auto q = pose;
+		q(2,0) =-q(2,0);
+		q(2,1) =-q(2,1);
+		q(2,2) =-q(2,2);
+		q(2,3) =-q(2,3);
+				return q;
+	}
 	}
 }
