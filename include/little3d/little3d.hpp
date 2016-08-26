@@ -6,3 +6,4 @@
 #include "little3d/gleigen.hpp"
 #include "little3d/imageproc.hpp"
 #include "little3d/arcball.hpp"
+#include "little3d/arcamera.hpp"

@@ -7,11 +7,21 @@ struct CameraIntrinsics
 	float dist[5] = {0,0,0,0,0}; // distorsion
 	int width=0,height=0;
 
+	CameraIntrinsics(int w, int h, Eigen::Matrix3f K) : width(w),height(h) 
+	{ 
+		fromK(K); 
+	}
+
+	CameraIntrinsics()  {}
+
 	void fromK(Eigen::Matrix3f K);
 	
 	Eigen::Matrix3f getK() const;
 	Eigen::Matrix4f getK4(float near, float far) const;
 
+	/**
+	 * Projection from Camera
+	 */
 	Eigen::Matrix4f getGLProjection(float near, float far, bool flipimage = false) const;
 
 };
