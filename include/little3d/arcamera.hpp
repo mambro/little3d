@@ -21,8 +21,10 @@ struct CameraIntrinsics
 
 	/**
 	 * Projection from Camera
+	 *
+	 * The default flipimage works well for equivalence to ARUCO
 	 */
-	Eigen::Matrix4f getGLProjection(float near, float far, bool flipimage = false) const;
+	Eigen::Matrix4f getGLProjection(float near, float far, bool flipimage = true) const;
 
 };
 

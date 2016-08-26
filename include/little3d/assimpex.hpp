@@ -155,15 +155,6 @@ struct material
 
 struct basicobj
 {
-	basicobj()
-	{
-		vvbo.init();
-		nvbo.init();
-		tvbo.init();
-		tevbo.init();
-		vao.init();		
-	}
-
 
 	void render(matrixsetup & mvp)
 	{

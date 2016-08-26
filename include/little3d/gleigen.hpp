@@ -75,5 +75,24 @@ namespace eigen {
 
 	    return res;
 	}
+
+	// pose of the camera WRT the origin => camera world inverse with Z flipped AKA 
+	template<class T>
+	Eigen::Matrix<T,4,4> camerapose2eye(Eigen::Matrix<T,4,4> pose)
+	{
+		Eigen::Matrix<T,4,4> q(pose.inverse());
+		q(2,0) =-q(2,0);
+		q(2,1) =-q(2,1);
+		q(2,2) =-q(2,2);
+		q(2,3) =-q(2,3);
+		return q;
+	}
+
+	// ALIAS deprecated
+	template<class T>
+	Eigen::Matrix<T,4,4> pose2camera(Eigen::Matrix<T,4,4> pose)
+	{
+		return camerapose2eye(pose);
+	}
 	}
 }

@@ -47,6 +47,7 @@ public:
 	};
 
 	Shader() {}
+	
 	operator GLuint ()
 	{
 		return resource_;
@@ -169,12 +170,12 @@ class WrappedUniform<Eigen::Vector3f>: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
-	void operator<<(const Eigen::Vector4f & x)
+	void operator<<(const Eigen::Vector3f & x)
 	{
 		*this = x;
 	}
 
-	WrappedUniform& operator=(const Eigen::Vector4f & x)
+	WrappedUniform& operator=(const Eigen::Vector3f & x)
 	{
 		// TODO assert about binding
 		glUniform3fv(uloc,1,x.data());
@@ -226,10 +227,16 @@ class WrappedUniform<Eigen::Matrix4f >: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
-	void operator<<(const Eigen::Matrix4f  & x)
+	WrappedUniform& operator=(const Eigen::Matrix4f & x)
 	{
 		// TODO assert about binding
 		glUniformMatrix4fv(uloc,1,GL_FALSE,x.data());
+		return *this;
+	}
+
+	void operator<<(const Eigen::Matrix4f  & x)
+	{
+		*this = x;
 	}
 };
 
@@ -240,10 +247,17 @@ class WrappedUniform<Eigen::Matrix3f >: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
-	void operator<<(const Eigen::Matrix3f  & x)
+
+	WrappedUniform& operator=(const Eigen::Matrix3f & x)
 	{
 		// TODO assert about binding
 		glUniformMatrix3fv(uloc,1,GL_FALSE,x.data());
+		return *this;
+	}
+
+	void operator<<(const Eigen::Matrix3f  & x)
+	{
+		*this = x;
 	}
 };
 
