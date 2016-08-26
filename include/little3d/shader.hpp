@@ -47,6 +47,7 @@ public:
 	};
 
 	Shader() {}
+	
 	operator GLuint ()
 	{
 		return resource_;
@@ -169,12 +170,12 @@ class WrappedUniform<Eigen::Vector3f>: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
-	void operator<<(const Eigen::Vector4f & x)
+	void operator<<(const Eigen::Vector3f & x)
 	{
 		*this = x;
 	}
 
-	WrappedUniform& operator=(const Eigen::Vector4f & x)
+	WrappedUniform& operator=(const Eigen::Vector3f & x)
 	{
 		// TODO assert about binding
 		glUniform3fv(uloc,1,x.data());

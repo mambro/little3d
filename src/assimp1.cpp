@@ -1,9 +1,5 @@
-#include <iostream>
-#include "little3d/app.hpp"
+#include "little3d/little3d.hpp"
 #include "little3d/assimpex.hpp"
-#include "little3d/gleigen.hpp"
-#include "little3d/imageproc.hpp"
-#include "little3d/arcball.hpp"
 
 using namespace little3d;
 
@@ -36,7 +32,7 @@ int main(int argc, char **argv)
 
 	// view
 	ArcBall hb(Eigen::Vector3f(0,0,0),0.75,window->screenToNDC());
-
+	hb->attach(window);
 	std::cout << "go...\n";
 	auto Proj = little3d::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
@@ -45,7 +41,7 @@ int main(int argc, char **argv)
 	);
 	auto View      = little3d::eigen::lookAt<float>({0,2,2},{0,0,0},{0,1,0});
 	Eigen::Matrix4f Model = Eigen::Matrix4f::Identity();
-	Model.block<3,3>(0,0) = Eigen::Matrix3f::Identity();
+	Model.diagonal() = Eigen::Vector4f(0.1,0.1,0.1,1.0);
 
 	std::cout << "Proj is\n" << Proj  << std::endl;
 	std::cout << "View is\n" <<  View  << std::endl;
@@ -59,23 +55,6 @@ int main(int argc, char **argv)
 	GLImageProc imgproc;
 	imgproc.init();
 
-	window->movefx = [&hb] (GLFWwindow *w,double x, double y) 
-	{
-		if(glfwGetMouseButton(w,0) == GLFW_PRESS)
-		{
-			hb.drag(Eigen::Vector2f(x,y));
-		}
-	};
-
-	window->mousefx = [&hb] (GLFWwindow *w,int button, int action, int mods) 
-	{
-		if(button == 0 && action == GLFW_PRESS)
-		{
-			double p[2];
-			glfwGetCursorPos(w,&p[0],&p[1]); // make helper
-			hb.beginDrag(Eigen::Vector2f(p[0],p[1]));
-		}		
-	};
 
 	do {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);

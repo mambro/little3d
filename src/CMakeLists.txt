@@ -1,4 +1,6 @@
 
+link_libraries(SOIL p::assimp)
+
 #add_executable(minimal minimal.cpp)
 
 #add_executable(minimal2 minimal2.cpp)
@@ -13,18 +15,18 @@ add_executable(simplecube simplecube.cpp)
 
 add_executable(aroverlay aroverlay.cpp)
 
+
 #add_executable(raytrace1 raytrace1.cpp)
 
 #add_executable(showimage showimage.cpp)
 
-#add_executable(assimp1 assimp1.cpp)
-#target_link_libraries(assimp1 p::assimp)
+add_executable(assimp1 assimp1.cpp)
+target_link_libraries(assimp1 p::assimp)
 
 #add_executable(assimp1ar assimp1ar.cpp)
 #target_link_libraries(assimp1ar p::assimp)
 
-#add_executable(assimp1capture assimp1capture.cpp)
-#target_link_libraries(assimp1capture SOIL p::assimp)
+add_executable(assimp1capture assimp1capture.cpp)
 
 #TBC
 #add_executable(assimp1deferred assimp1deferred.cpp)
