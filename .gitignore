@@ -2,3 +2,6 @@
 **/build/*
 **~
 *~ 
+# Ignore qt build folder
+**/build-src-Desktop-Default/*
+**/CMakeLists.txt.user
