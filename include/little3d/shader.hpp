@@ -153,10 +153,14 @@ public:
 
 	void operator<<(const Eigen::Vector4f & x)
 	{
+		*this = x;
+	}
+	WrappedUniform& operator=(const Eigen::Vector4f & x)
+	{
 		// TODO assert about binding
 		glUniform4fv(uloc,1,x.data());
+		return *this;
 	}
-
 	
 };
 template <>
@@ -165,11 +169,17 @@ class WrappedUniform<Eigen::Vector3f>: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
-	void operator<<(const Eigen::Vector3f & x)
+	void operator<<(const Eigen::Vector4f & x)
+	{
+		*this = x;
+	}
+
+	WrappedUniform& operator=(const Eigen::Vector4f & x)
 	{
 		// TODO assert about binding
 		glUniform3fv(uloc,1,x.data());
 		// GL_INVALID_OPERATION
+		return *this;
 	}
 };
 
@@ -179,10 +189,15 @@ class WrappedUniform<float>: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
+	WrappedUniform& operator=(const float & x)
+	{
+		glUniform1f(uloc,x);
+		return *this;
+	}
+
 	void operator<<(const float & x)
 	{
-		// TODO assert about binding
-		glUniform1f(uloc,x);
+		*this = x;
 	}
 };
 
@@ -193,10 +208,15 @@ class WrappedUniform<int>: public WrappedUniformBase
 public:
 	WrappedUniform(int n=-1): WrappedUniformBase(n) {}
 
+	WrappedUniform& operator=(const int & x)
+	{
+		glUniform1i(uloc,x);
+		return *this;
+	}
+
 	void operator<<(const int & x)
 	{
-		// TODO assert about binding
-		glUniform1i(uloc,x);
+		*this = x;
 	}
 };
 
