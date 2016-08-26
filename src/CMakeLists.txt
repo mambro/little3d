@@ -28,8 +28,9 @@ target_link_libraries(assimp1 p::assimp)
 
 add_executable(assimp1capture assimp1capture.cpp)
 
+add_executable(assimp1deferred assimp1deferred.cpp)
+
 #TBC
-#add_executable(assimp1deferred assimp1deferred.cpp)
 #target_link_libraries(assimp1deferred SOIL p::assimp)
 
 #add_executable(assimp1oit assimp1oit.cpp)

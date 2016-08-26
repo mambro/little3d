@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 
 	// view
 	ArcBall hb(Eigen::Vector3f(0,0,0),0.75,window->screenToNDC());
-	hb->attach(window);
+	hb.attach(window);
 	std::cout << "go...\n";
 	auto Proj = little3d::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?

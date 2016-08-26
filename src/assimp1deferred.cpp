@@ -2,16 +2,8 @@
 // http://learnopengl.com/#!Advanced-Lighting/Deferred-Shading
 // http://www.ogldev.org/www/tutorial36/tutorial36.html
 // http://gamedevs.org/uploads/deferred-shading-tutorial.pdf
-#include "little3d/app.hpp"
-#include "little3d/draw.hpp"
-#include "little3d/gleigen.hpp"
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
-#include <Eigen/Geometry>
-#include <iostream>
+#include "little3d/little3d.hpp"
 #include "little3d/assimpex.hpp"
-#include "little3d/arcball.hpp"
 
 
 
@@ -498,7 +490,6 @@ int main(int argc, char **argv)
 	shadow.updateMatrix(l);
 	defr.lightMat = shadow.lightMat;
 
-	//TODO ArcBall ab(glm::vec3(0,0,0),0.75,);
 	auto Proj = little3d::eigen::perspective<float>(60.0f,         // The horizontal Field of View, in degrees : the amount of "zoom". Think "camera lens". Usually between 90° (extra wide) and 30° (quite zoomed in)
 	    width/(float)height, // Aspect Ratio. Depends on the size of your window. Notice that 4/3 == 800/600 == 1280/960, sounds familiar ?
 	    0.1f,        // Near clipping plane. Keep as big as possible, or you'll get precision issues.
@@ -515,22 +506,7 @@ int main(int argc, char **argv)
 
 
 	ArcBall hb(Eigen::Vector3f(0,0,0),0.75,window->screenToNDC());
-	window->movefx = [&hb] (GLFWwindow *w,double x, double y) 
-	{
-		if(glfwGetMouseButton(w,0) == GLFW_PRESS)
-		{
-			hb.drag(Eigen::Vector2f(x,y));
-		}
-	};
-	window->mousefx = [&hb] (GLFWwindow *w,int button, int action, int mods) 
-	{
-		if(button == 0 && action == GLFW_PRESS)
-		{
-			double p[2];
-			glfwGetCursorPos(w,&p[0],&p[1]); // make helper
-			hb.beginDrag(Eigen::Vector2f(p[0],p[1]));
-		}		
-	};	
+	hb.attach(window);
 
 
 	auto fx = [&hb,&objects] (const Eigen::Matrix4f & proj, const Eigen::Matrix4f & view) {
