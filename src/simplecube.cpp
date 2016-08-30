@@ -50,7 +50,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 
-
 const char * meshv = GLSL330(
 	layout(location = 0) in vec3 point;
 	uniform mat4 T;
@@ -79,7 +78,7 @@ int main(int argc, char **argv)
 	VBO<1> vvbo;
 	VAO vao;
 
-	Shader sha(Shader::FromString,meshv,meshf);
+    Shader sha(Shader::FromString,meshv,meshf);
 
 	{
 		GLScope<VBO<1> > t(vvbo);

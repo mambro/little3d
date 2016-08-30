@@ -177,7 +177,7 @@ struct GLScope
 	class VBO
 	{
 	public:
-		VBO() { init(); }
+        VBO() {}
 
 		void init()
 		{
@@ -231,7 +231,7 @@ struct GLScope
 	class VBO<1>
 	{
 	public:
-		VBO(): resource_(0) {  init(); }
+        VBO(): resource_(0) {  }
 
 		void init()
 		{
@@ -403,7 +403,7 @@ struct GLScope
 	class VAO
 	{
 	public:
-		VAO(): resource_(0) { init(); }
+        VAO(): resource_(0) {  }
 
 		void init()
 		{
